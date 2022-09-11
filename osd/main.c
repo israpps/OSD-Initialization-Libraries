@@ -274,9 +274,10 @@ int main(int argc, char *argv[])
     SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
     SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
     SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
+    SifExecModuleBuffer(padman_irx, size_padman_irx, 0, NULL, NULL);
     // Initialize libmc.
     mcInit(MC_TYPE_XMC);
-    
+
     PadInitPads();
 
     // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
