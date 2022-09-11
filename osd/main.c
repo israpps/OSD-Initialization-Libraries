@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
         {LoadElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
 
     scr_printf("Looking for INFMAN...\n");
-    else if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
+    if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
         {LoadElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
         {LoadElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
