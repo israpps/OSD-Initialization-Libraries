@@ -276,6 +276,8 @@ int main(int argc, char *argv[])
     SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
     // Initialize libmc.
     mcInit(MC_TYPE_XMC);
+    
+    PadInitPads();
 
     // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
     SifLoadModule("rom0:ADDDRV", 0, NULL);
@@ -405,12 +407,10 @@ int main(int argc, char *argv[])
         But because we are targeting all consoles, it would be probably safer to follow the HDD Browser. */
     /*  If execution reaches here, SIFRPC has been initialized. You can choose to exit, or do something else.
         But if you do something else that requires SIFRPC, remember to re-initialize SIFRPC first. */
-    scr_printf("PadInit...\n");
-    PadInitPads();
+    
     int padval = 0;
     scr_printf("PadRead...\n");
     padval = ReadCombinedPadStatus();
-    PadDeinitPads();
     if (padval & PAD_CROSS)
     {
         scr_printf("Cross selected... Looking for OPL\n");
@@ -431,5 +431,7 @@ int main(int argc, char *argv[])
         {LoadElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
         {LoadElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
+        
+    PadDeinitPads();
     return 0;
 }
