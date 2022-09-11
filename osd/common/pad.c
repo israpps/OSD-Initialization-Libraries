@@ -26,7 +26,8 @@ void PadDeinitPads(void)
 	padEnd();
 }
 
-int ReadPadStatus_raw(int port, int slot){
+int ReadPadStatus_raw(int port, int slot)
+{
 	struct padButtonStatus buttons;
 	u32 paddata;
 
@@ -38,11 +39,13 @@ int ReadPadStatus_raw(int port, int slot){
 	return paddata;
 }
 
-int ReadCombinedPadStatus_raw(void){
+int ReadCombinedPadStatus_raw(void)
+{
 	return(ReadPadStatus_raw(0, 0)|ReadPadStatus_raw(1, 0));
 }
 
-int ReadPadStatus(int port, int slot){
+int ReadPadStatus(int port, int slot)
+{
 	struct padButtonStatus buttons;
 	u32 new_pad, paddata;
 
@@ -57,6 +60,7 @@ int ReadPadStatus(int port, int slot){
 	return new_pad;
 }
 
-int ReadCombinedPadStatus(void){
+int ReadCombinedPadStatus(void)
+{
 	return(ReadPadStatus(0, 0)|ReadPadStatus(1, 0));
 }

@@ -14,13 +14,13 @@ PSX ?= 0
 
 EE_BIN ?= example.elf
 
-IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o
+IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
 ICONS_TEMP = icon_sys_A.c icon_sys_J.c icon_sys_C.c sio2man_irx.c mcman_irx.c mcserv_irx.c
 IOPRP_TEMP = ioprp.c
 EE_OBJS = main.o common/pad.c common/libcdvd_add.o common/OSDConfig.o common/OSDInit.o common/OSDHistory.o common/dvdplayer.o common/ps1.o common/ps2.o common/modelname.o $(ICONS) $(IOP_OBJS)
 
-EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I. -Iinclude -Ipsx
+EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I. -Iinclude -Ipsx
 EE_LDFLAGS := -L$(PS2SDK)/ee/lib -nostartfiles -Tlinkfile
 EE_LIBS := -lmc -ldebug -lpatches -lc -lkernel -lpadx 
 EE_CFLAGS += -mno-gpopt -G0 -Os -Wall
