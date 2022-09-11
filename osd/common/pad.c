@@ -2,7 +2,7 @@
 #include <libpad.h>
 #include <stdio.h>
 #include <string.h>
-#include <tamtypes.h>
+//#include <tamtypes.h>
 
 #include "pad.h"
 
