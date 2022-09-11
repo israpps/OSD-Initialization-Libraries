@@ -49,6 +49,7 @@ else
 endif
 all: $(EE_BIN_PACKED)
 	@echo done
+
 %.o : %.c
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
@@ -67,6 +68,7 @@ $(EE_BIN_STRIPPED): $(EE_BIN)
 
 $(EE_BIN_PACKED): $(EE_BIN_STRIPPED)
 	ps2-packer -v $< $@
+
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS) $(ICONS_TEMP) $(IOPRP_TEMP)
 

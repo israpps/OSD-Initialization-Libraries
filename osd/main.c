@@ -405,10 +405,11 @@ int main(int argc, char *argv[])
         But because we are targeting all consoles, it would be probably safer to follow the HDD Browser. */
     /*  If execution reaches here, SIFRPC has been initialized. You can choose to exit, or do something else.
         But if you do something else that requires SIFRPC, remember to re-initialize SIFRPC first. */
+    PadInitPads();
     int padval = 0;
 
     padval = ReadCombinedPadStatus();
-
+    PadDeinitPads();
     if (padval & PAD_CROSS)
     {
     if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
