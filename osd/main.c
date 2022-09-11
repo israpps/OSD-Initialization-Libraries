@@ -414,6 +414,7 @@ int main(int argc, char *argv[])
     int padval = 0;
     scr_printf("PadRead...\n");
     padval = ReadCombinedPadStatus();
+    PadDeinitPads();
     if (padval & PAD_CROSS)
     {
         scr_printf("Cross selected... Looking for OPL\n");
@@ -435,6 +436,5 @@ int main(int argc, char *argv[])
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
         {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
         
-    PadDeinitPads();
     return 0;
 }
