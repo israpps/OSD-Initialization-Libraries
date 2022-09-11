@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 //#include <tamtypes.h>
+#include <debug.h>
 
 #include "pad.h"
 
