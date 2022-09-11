@@ -13,7 +13,8 @@ XCDVD_READKEY ?= 0
 PSX ?= 0
 
 EE_BIN ?= example.elf
-
+EE_BIN_PACKED = SC-$(EE_BIN)
+EE_BIN_STRIPPED = S-$(EE_BIN)
 IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
 ICONS_TEMP = icon_sys_A.c icon_sys_J.c icon_sys_C.c sio2man_irx.c mcman_irx.c mcserv_irx.c
@@ -60,6 +61,11 @@ $(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \
 		-o $(EE_BIN) $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o $(EE_LIBS)
 
+$(EE_BIN_STRIPPED): $(EE_BIN)
+	$(EE_STRIP) -o $@ $<
+
+$(EE_BIN_PACKED): $(EE_BIN_STRIPPED)
+	ps2-packer -v $< $@
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS) $(ICONS_TEMP) $(IOPRP_TEMP)
 
