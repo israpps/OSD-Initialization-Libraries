@@ -106,6 +106,7 @@ static int file_exists(char *filepath)
 
 void LoadElf(char *filename, char *party)
 {
+    scr_printf("Loading %s", filename);
 	char *args[1];
 	t_ExecData exec;
 	SifLoadElf(filename, &exec);
