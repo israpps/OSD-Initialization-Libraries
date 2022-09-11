@@ -31,7 +31,11 @@ jobs:
 
       - name: Compile osd
         run: |
-          make -C osd clean all ${{ matrix.type }}
+          cd osd/loader
+          make clean all
+          cd ..
+          make clean all ${{ matrix.type }}
+          cd ..
           ls -l osd
 
       - name: Upload artifacts
