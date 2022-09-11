@@ -67,8 +67,8 @@ loader/loader.elf: loader
 loader_elf.c: loader/loader.elf
 	bin2c $< $@ loader_elf
 
-loader_elf.o: loader_elf.c
-	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+#loader_elf.o: loader_elf.c
+#	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 $(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \

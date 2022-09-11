@@ -30,6 +30,7 @@ endif
 all: $(EE_BIN)
 	@echo ELF Loader built
 clean:
+	@echo cleaning loader
 	rm -f -r $(EE_OBJS) $(EE_BIN)
 
 include $(PS2SDK)/Defs.make
