@@ -28,6 +28,7 @@
 #include "ps1.h"
 #include "ps2.h"
 #include "modelname.h"
+#include "pad.h"
 
 #define ResetIOP() SifInitRpc(0); while (!SifIopReset("", 0)) {}; while (!SifIopSync()) {}; SifInitRpc(0);
 
@@ -127,6 +128,7 @@ void LoadElf(char *filename, char *party)
 
 int dischandler()
 {
+    int OldDiscType, DiscType, ValidDiscInserted, result;
     scr_printf("Enabling Diagnosis...\n");
     do
     { // 0 = enable, 1 = disable.
@@ -226,7 +228,7 @@ int dischandler()
 
 int main(int argc, char *argv[])
 {
-    int OldDiscType, DiscType, ValidDiscInserted, result;
+    int result;
     u32 stat;
 #ifndef PSX
     int fd;
