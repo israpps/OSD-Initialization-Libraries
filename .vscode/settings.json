@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "osdconfig.h": "c"
+        "osdconfig.h": "c",
+        "string.h": "c"
     }
 }
