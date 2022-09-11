@@ -12,6 +12,7 @@
 #include <libpad.h>
 #include <loadfile.h>
 #include <sifrpc.h>
+#include <sifcmd.h>
 #include <osd_config.h>
 
 #include <sbv_patches.h>
