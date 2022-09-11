@@ -38,8 +38,7 @@ IMPORT_BIN2C(mcserv_irx)
 
 
 #ifdef PSX
-extern unsigned char psx_ioprp[];
-extern unsigned int size_psx_ioprp;
+IMPORT_BIN2C(psx_ioprp);
 #endif
 
 void CleanUp(void)
