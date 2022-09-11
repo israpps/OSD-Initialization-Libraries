@@ -28,14 +28,14 @@
 #include "ps2.h"
 #include "modelname.h"
 
-extern unsigned char sio2man_irx[];
-extern unsigned int size_sio2man_irx;
+#define IMPORT_BIN2C(_n) \
+extern unsigned char _n[]; \
+extern unsigned int size_ ## _n;
 
-extern unsigned char mcman_irx[];
-extern unsigned int size_mcman_irx;
+IMPORT_BIN2C(sio2man_irx)
+IMPORT_BIN2C(mcman_irx)
+IMPORT_BIN2C(mcserv_irx)
 
-extern unsigned char mcserv_irx[];
-extern unsigned int size_mcserv_irx;
 
 #ifdef PSX
 extern unsigned char psx_ioprp[];
@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
     SetGsVParam(OSDConfigGetVideoOutput() == VIDEO_OUTPUT_RGB ? 0 : 1);
 
     init_scr();
+    /*
     scr_printf("SIDIF Mode:\t%u\n"
                "Screen type:\t%u\n"
                "Video mode:\t%u\n"
@@ -235,6 +236,7 @@ int main(int argc, char *argv[])
                OSDConfigGetDaylightSaving(),
                OSDConfigGetTimeFormat(),
                OSDConfigGetDateFormat());
+    */
 
     /*    If required, make any changes with the getter/setter functions in OSDConfig.h, before calling OSDConfigSave(1).
     Example: */
