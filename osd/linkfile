@@ -13,6 +13,22 @@
 
 ENTRY(_start);
 
+/* WLE STUFF
+*/
+MEMORY {
+	bios	: ORIGIN = 0x00000000, LENGTH = 528K /* 0x00000000 - 0x00084000: BIOS memory */
+	bram	: ORIGIN = 0x00084000, LENGTH = 496K /* 0x00084000 - 0x00100000: BIOS unused memory */
+	gram	: ORIGIN = 0x00100000, LENGTH =  31M /* 0x00100000 - 0x02000000: GAME memory */
+}
+REGION_ALIAS("MAIN_REGION", bram);
+
+PHDRS {
+  text PT_LOAD;
+}
+
+/* WLE STUFF
+*/
+
 SECTIONS {
 	.text 0x00200000: {
 		_ftext = . ;
