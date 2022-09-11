@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        type: ["PSX=1 EE_BIN=PSX.ELF", PSX=0 EE_BIN=PS2.ELF]
+        type: ["PSX=0 EE_BIN=PS2.ELF"] #PSX=1 EE_BIN=PSX.ELF", 
     container: ps2dev/ps2dev:v1.0
     # instead of "ps2dev/ps2dev:latest" you can use different tags, for example for old projects you can use "ps2dev/ps2dev:v1.0"
     steps:
@@ -31,7 +31,7 @@ jobs:
 
       - name: Compile osd
         run: |
-          make -C osd ${{ matrix.type }}
+          make -C osd clean all ${{ matrix.type }}
           ls -l osd
 
       - name: Upload artifacts
