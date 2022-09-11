@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <malloc.h>
+#include <stdio.h>
 
 #define MAX_PATH 1025
 
@@ -125,7 +126,7 @@ void RunLoaderElf(char *filename, char *party)
 	void *pdata;
 	int i;
 	char *argv[2], bootpath[256];
-
+#ifdef HDDSUPPORT
 	if ((!strncmp(party, "hdd0:", 5)) && (!strncmp(filename, "pfs0:", 5))) {
 		if (0 > fileXioMount("pfs0:", party, FIO_MT_RDONLY)) {
 			//Some error occurred, it could be due to something else having used pfs0
@@ -148,7 +149,11 @@ void RunLoaderElf(char *filename, char *party)
 		argv[0] = filename;
 		argv[1] = filename;
 	}
+#else
+		argv[0] = filename;
+		argv[1] = filename;
 
+#endif
 	/* NB: LOADER.ELF is embedded  */
 	boot_elf = (u8 *)loader_elf;
 	eh = (elf_header_t *)boot_elf;
