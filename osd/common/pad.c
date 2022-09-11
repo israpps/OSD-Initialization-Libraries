@@ -3,9 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <tamtypes.h>
-#include <debug.h>
 
 #include "pad.h"
+typedef unsigned int u32;
 
 static unsigned char padArea[2][256] ALIGNED(64);
 static unsigned int old_pad[2]={0, 0};
