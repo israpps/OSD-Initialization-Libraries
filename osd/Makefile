@@ -78,8 +78,8 @@ clean:
 loader/loader.elf: loader
 	$(MAKE) -C $<
 
-loader_elf.s: loader/loader.elf
-	bin2s $< $@ loader_elf
+loader_elf.c: loader/loader.elf
+	bin2c $< $@ loader_elf
 
 include embed.make
 include $(PS2SDK)/Defs.make
