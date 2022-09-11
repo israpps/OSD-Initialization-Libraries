@@ -34,6 +34,11 @@ jobs:
           cd osd/loader
           make clean all
           cd ..
+          ls -l loader
+
+      - name: Compile osd
+        run: |
+          cd osd
           make clean all ${{ matrix.type }}
           cd ..
           ls -l osd
