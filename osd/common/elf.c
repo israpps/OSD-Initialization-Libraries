@@ -69,6 +69,7 @@ int checkELFheader(char *path)
 	strcpy(fullpath, path);
 	if (!strncmp(fullpath, "mc", 2) || !strncmp(fullpath, "vmc", 3) || !strncmp(fullpath, "rom", 3) || !strncmp(fullpath, "cdrom", 5) || !strncmp(fullpath, "cdfs", 4)) {
 		;  //fullpath is already correct
+#ifdef HDDSUPPORT
 	} else if (!strncmp(fullpath, "hdd0:", 5)) {
 		p = &path[5];
 		if (*p == '/')
@@ -80,6 +81,7 @@ int checkELFheader(char *path)
 		if ((ret = mountParty(tmp)) < 0)
 			goto error;
 		fullpath[3] += ret;
+#endif
 	} else if (!strncmp(fullpath, "mass", 4)) {
 		char *pathSep;
 
@@ -94,12 +96,12 @@ int checkELFheader(char *path)
 	}
 	if ((fd = open(fullpath, O_RDONLY)) < 0)
 		goto error;
-	size = seek(fd, 0, SEEK_END);
+	size = fseek(fd, 0, SEEK_END);
 	if (!size) {
 		close(fd);
 		goto error;
 	}
-	seek(fd, 0, SEEK_SET);
+	fseek(fd, 0, SEEK_SET);
 	read(fd, boot_elf, sizeof(elf_header_t));
 	close(fd);
 
