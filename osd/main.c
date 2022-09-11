@@ -129,6 +129,7 @@ void LoadElf(char *filename, char *party)
 int dischandler()
 {
     int OldDiscType, DiscType, ValidDiscInserted, result;
+    u32 stat;
     scr_printf("Enabling Diagnosis...\n");
     do
     { // 0 = enable, 1 = disable.
