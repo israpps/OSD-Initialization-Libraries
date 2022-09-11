@@ -1,18 +1,18 @@
 #Enable to write ICOBYSYS (_SCE8 icon), if the console does not belong to US, Europe, Asia or Japan.
 #The icon (icobysys.icn) must be supplied.
-WRITE_ICOBYSYS = 0
+WRITE_ICOBYSYS ?= 0
 
 #Enable to enable the check against DVD Player v1.00 and v1.01.
 #This will prohibit them from being booted.
-PROHBIT_DVD_0100 = 0
+PROHBIT_DVD_0100 ?= 0
 
 #Enable to enable the newer sceCdReadKey checks, which are only supported by a newer CDVDMAN module.
-XCDVD_READKEY = 0
+XCDVD_READKEY ?= 0
 
 #Enable to build the PSX example.
-PSX = 0
+PSX ?= 0
 
-EE_BIN = example.elf
+EE_BIN ?= example.elf
 
 IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
