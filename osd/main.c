@@ -32,7 +32,6 @@
 #include "pad.h"
 
 #define ResetIOP() SifInitRpc(0); while (!SifIopReset("", 0)) {}; while (!SifIopSync()) {}; SifInitRpc(0);
-void RunLoaderElf(char *filename, char *party);
 
 #define IMPORT_BIN2C(_n) \
 extern unsigned char _n[]; \
@@ -51,6 +50,7 @@ IMPORT_BIN2C(psx_ioprp);
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
     sceCdInit(SCECdEXIT);
+    SifExitCmd();
 }
 
 static void AlarmCallback(s32 alarm_id, u16 time, void *common)
@@ -111,7 +111,7 @@ void LoadElf(char* filename)
     char* argv[1];
     argv[0] = filename;
     scr_printf("Loading %s", filename);
-    SifExitCmd();
+    CleanUp();
     LoadExecPS2(filename, 1, argv);
 }
 
