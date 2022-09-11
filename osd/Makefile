@@ -64,7 +64,7 @@ all: $(EE_BIN_PACKED)
 loader/loader.elf: loader
 	$(MAKE) -C $<
 
-loader_elf.c: loader/loader.elf
+loader_elf.c: loader.elf
 	bin2c $< $@ loader_elf
 
 #loader_elf.o: loader_elf.c
