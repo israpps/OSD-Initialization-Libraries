@@ -61,6 +61,15 @@ all: $(EE_BIN_PACKED)
 %.o : %.S
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
+loader/loader.elf: loader
+	$(MAKE) -C $<
+
+loader_elf.c: loader/loader.elf
+	bin2c $< $@ loader_elf
+
+loader_elf.o: loader_elf.c
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+
 $(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \
 		-o $(EE_BIN) $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o $(EE_LIBS)
@@ -74,12 +83,6 @@ $(EE_BIN_PACKED): $(EE_BIN_STRIPPED)
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS) $(ICONS_TEMP) $(IOPRP_TEMP)
 	$(MAKE) -C loader clean
-
-loader/loader.elf: loader
-	$(MAKE) -C $<
-
-loader_elf.c: loader/loader.elf
-	bin2c $< $@ loader_elf
 
 include embed.make
 include $(PS2SDK)/Defs.make

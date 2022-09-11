@@ -28,7 +28,7 @@ EE_LIBS += -ldebug
 endif
 
 all: $(EE_BIN)
-
+	@echo ELF Loader built
 clean:
 	rm -f -r $(EE_OBJS) $(EE_BIN)
 
