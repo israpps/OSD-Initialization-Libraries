@@ -104,6 +104,7 @@ static int file_exists(char *filepath)
 
 	return 1;
 }
+
 void LoadElf(char* filename)
 {
     char* argv[1];
@@ -112,12 +113,15 @@ void LoadElf(char* filename)
     SifExitCmd();
     LoadExecPS2(filename, 1, argv);
 }
+
+#if 0
 void LoadElf(char *filename, char* argv[], int argc)
 {
     scr_printf("Loading %s", filename);
     SifExitCmd();
     LoadExecPS2(filename, argc, argv);
 }
+#endif
 
 int dischandler()
 {
