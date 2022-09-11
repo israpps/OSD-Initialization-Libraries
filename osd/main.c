@@ -104,28 +104,19 @@ static int file_exists(char *filepath)
 
 	return 1;
 }
-
-void LoadElf(char *filename, char *party)
+void LoadElf(char* filename)
+{
+    char* argv[1];
+    argv[0] = filename;
+    scr_printf("Loading %s", filename);
+    SifExitCmd();
+    LoadExecPS2(filename, 1, argv);
+}
+void LoadElf(char *filename, char* argv[], int argc)
 {
     scr_printf("Loading %s", filename);
-	char *args[1];
-	t_ExecData exec;
-	SifLoadElf(filename, &exec);
-
-	if (exec.epc > 0)
-	{
-		ResetIOP();
-
-		if (party != 0)
-		{
-			args[0] = party;
-			ExecPS2((void *)exec.epc, (void *)exec.gp, 1, args);
-		}
-		else
-		{
-			ExecPS2((void *)exec.epc, (void *)exec.gp, 0, NULL);
-		}
-	}
+    SifExitCmd();
+    LoadExecPS2(filename, argc, argv);
 }
 
 int dischandler()
@@ -419,22 +410,22 @@ int main(int argc, char *argv[])
     {
         scr_printf("Cross selected... Looking for OPL\n");
         if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc0:/APPS/OPNPS2LD.ELF", "mc0:/APPS/");}
+            {LoadElf("mc0:/APPS/OPNPS2LD.ELF");}
         else if (file_exists("mc1:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc1:/APPS/OPNPS2LD.ELF", "mc1:/APPS/");}
+            {LoadElf("mc1:/APPS/OPNPS2LD.ELF");}
     }
     scr_printf("Looking for DEV1...\n");
 
     if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");}
+        {LoadElf("mc0:/BOOT/BOOT.ELF");}
     else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
+        {LoadElf("mc1:/BOOT/BOOT.ELF");}
 
     scr_printf("Looking for INFMAN...\n");
     if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");}
+        {LoadElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
+        {LoadElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
         
     return 0;
 }
