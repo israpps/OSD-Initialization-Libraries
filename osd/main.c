@@ -9,6 +9,7 @@
 #include <iopheap.h>
 #include <libcdvd.h>
 #include <libmc.h>
+#include <libpad.h>
 #include <loadfile.h>
 #include <sifrpc.h>
 #include <osd_config.h>
@@ -28,6 +29,8 @@
 #include "ps2.h"
 #include "modelname.h"
 
+#define ResetIOP() SifInitRpc(0); while (!SifIopReset("", 0)) {}; while (!SifIopSync()) {}; SifInitRpc(0);
+
 #define IMPORT_BIN2C(_n) \
 extern unsigned char _n[]; \
 extern unsigned int size_ ## _n;
@@ -35,6 +38,7 @@ extern unsigned int size_ ## _n;
 IMPORT_BIN2C(sio2man_irx)
 IMPORT_BIN2C(mcman_irx)
 IMPORT_BIN2C(mcserv_irx)
+IMPORT_BIN2C(padman_irx)
 
 
 #ifdef PSX
@@ -85,6 +89,140 @@ static void InitPSX()
     while (!SifIopSync()) {};
 }
 #endif
+
+static int file_exists(char *filepath)
+{
+	int fdn;
+
+	fdn = open(filepath, O_RDONLY);
+	if (fdn < 0)
+		return 0;
+
+	close(fdn);
+
+	return 1;
+}
+
+void LoadElf(char *filename, char *party)
+{
+	char *args[1];
+	t_ExecData exec;
+	SifLoadElf(filename, &exec);
+
+	if (exec.epc > 0)
+	{
+		ResetIOP();
+
+		if (party != 0)
+		{
+			args[0] = party;
+			ExecPS2((void *)exec.epc, (void *)exec.gp, 1, args);
+		}
+		else
+		{
+			ExecPS2((void *)exec.epc, (void *)exec.gp, 0, NULL);
+		}
+	}
+}
+
+int dischandler()
+{
+    scr_printf("Enabling Diagnosis...\n");
+    do
+    { // 0 = enable, 1 = disable.
+        result = sceCdAutoAdjustCtrl(0, &stat);
+    } while ((stat & 0x08) || (result == 0));
+
+    // For this demo, wait for a valid disc to be inserted.
+    scr_printf("Waiting for disc to be inserted...\n");
+
+    ValidDiscInserted = 0;
+    OldDiscType       = -1;
+    while (!ValidDiscInserted)
+    {
+        DiscType = sceCdGetDiskType();
+        if (DiscType != OldDiscType)
+        {
+            scr_printf("New Disc:\t");
+            OldDiscType = DiscType;
+
+            switch (DiscType)
+            {
+                case SCECdNODISC:
+                    scr_printf("No Disc\n");
+                    break;
+
+                case SCECdDETCT:
+                case SCECdDETCTCD:
+                case SCECdDETCTDVDS:
+                case SCECdDETCTDVDD:
+                    scr_printf("Reading Disc...\n");
+                    break;
+
+                case SCECdPSCD:
+                case SCECdPSCDDA:
+                    scr_printf("PlayStation\n");
+                    ValidDiscInserted = 1;
+                    break;
+
+                case SCECdPS2CD:
+                case SCECdPS2CDDA:
+                case SCECdPS2DVD:
+                    scr_printf("PlayStation 2\n");
+                    ValidDiscInserted = 1;
+                    break;
+
+                case SCECdCDDA:
+                    scr_printf("Audio Disc (not supported by this demo)\n");
+                    break;
+
+                case SCECdDVDV:
+                    scr_printf("DVD Video\n");
+                    ValidDiscInserted = 1;
+                    break;
+                default:
+                    scr_printf("Unknown\n");
+            }
+        }
+
+        // Avoid spamming the IOP with sceCdGetDiskType(), or there may be a deadlock.
+        // The NTSC/PAL H-sync is approximately 16kHz. Hence approximately 16 ticks will pass every millisecond.
+        SetAlarm(1000 * 16, &AlarmCallback, (void *)GetThreadId());
+        SleepThread();
+    }
+
+    // Now that a valid disc is inserted, do something.
+    // CleanUp() will be called, to deinitialize RPCs. SIFRPC will be deinitialized by the respective disc-handlers.
+    switch (DiscType)
+    {
+        case SCECdPSCD:
+        case SCECdPSCDDA:
+            // Boot PlayStation disc
+            PS1DRVBoot();
+            break;
+
+        case SCECdPS2CD:
+        case SCECdPS2CDDA:
+        case SCECdPS2DVD:
+            // Boot PlayStation 2 disc
+            PS2DiscBoot();
+            break;
+
+        case SCECdDVDV:
+            /*  If the user chose to disable the DVD Player progressive scan setting,
+                it is disabled here because Sony probably wanted the setting to only bind if the user played a DVD.
+                The original did the updating of the EEPROM in the background, but I want to keep this demo simple.
+                The browser only allowed this setting to be disabled, by only showing the menu option for it if it was enabled by the DVD Player. */
+            /* OSDConfigSetDVDPProgressive(0);
+            OSDConfigApply(); */
+
+            /*  Boot DVD Player. If one is stored on the memory card and is newer, it is booted instead of the one from ROM.
+                Play history is automatically updated. */
+            DVDPlayerBoot();
+            break;
+    }
+    return 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -262,103 +400,28 @@ int main(int argc, char *argv[])
         Hmm. What should the check for stat be? In v1.xx, it seems to be a check against 0x08. In v2.20, it checks against 0x80.
         The HDD browser checks for 0x08.
         But because we are targeting all consoles, it would be probably safer to follow the HDD Browser. */
-    scr_printf("Enabling Diagnosis...\n");
-    do
-    { // 0 = enable, 1 = disable.
-        result = sceCdAutoAdjustCtrl(0, &stat);
-    } while ((stat & 0x08) || (result == 0));
-
-    // For this demo, wait for a valid disc to be inserted.
-    scr_printf("Waiting for disc to be inserted...\n");
-
-    ValidDiscInserted = 0;
-    OldDiscType       = -1;
-    while (!ValidDiscInserted)
-    {
-        DiscType = sceCdGetDiskType();
-        if (DiscType != OldDiscType)
-        {
-            scr_printf("New Disc:\t");
-            OldDiscType = DiscType;
-
-            switch (DiscType)
-            {
-                case SCECdNODISC:
-                    scr_printf("No Disc\n");
-                    break;
-
-                case SCECdDETCT:
-                case SCECdDETCTCD:
-                case SCECdDETCTDVDS:
-                case SCECdDETCTDVDD:
-                    scr_printf("Reading Disc...\n");
-                    break;
-
-                case SCECdPSCD:
-                case SCECdPSCDDA:
-                    scr_printf("PlayStation\n");
-                    ValidDiscInserted = 1;
-                    break;
-
-                case SCECdPS2CD:
-                case SCECdPS2CDDA:
-                case SCECdPS2DVD:
-                    scr_printf("PlayStation 2\n");
-                    ValidDiscInserted = 1;
-                    break;
-
-                case SCECdCDDA:
-                    scr_printf("Audio Disc (not supported by this demo)\n");
-                    break;
-
-                case SCECdDVDV:
-                    scr_printf("DVD Video\n");
-                    ValidDiscInserted = 1;
-                    break;
-                default:
-                    scr_printf("Unknown\n");
-            }
-        }
-
-        // Avoid spamming the IOP with sceCdGetDiskType(), or there may be a deadlock.
-        // The NTSC/PAL H-sync is approximately 16kHz. Hence approximately 16 ticks will pass every millisecond.
-        SetAlarm(1000 * 16, &AlarmCallback, (void *)GetThreadId());
-        SleepThread();
-    }
-
-    // Now that a valid disc is inserted, do something.
-    // CleanUp() will be called, to deinitialize RPCs. SIFRPC will be deinitialized by the respective disc-handlers.
-    switch (DiscType)
-    {
-        case SCECdPSCD:
-        case SCECdPSCDDA:
-            // Boot PlayStation disc
-            PS1DRVBoot();
-            break;
-
-        case SCECdPS2CD:
-        case SCECdPS2CDDA:
-        case SCECdPS2DVD:
-            // Boot PlayStation 2 disc
-            PS2DiscBoot();
-            break;
-
-        case SCECdDVDV:
-            /*  If the user chose to disable the DVD Player progressive scan setting,
-                it is disabled here because Sony probably wanted the setting to only bind if the user played a DVD.
-                The original did the updating of the EEPROM in the background, but I want to keep this demo simple.
-                The browser only allowed this setting to be disabled, by only showing the menu option for it if it was enabled by the DVD Player. */
-            /* OSDConfigSetDVDPProgressive(0);
-            OSDConfigApply(); */
-
-            /*  Boot DVD Player. If one is stored on the memory card and is newer, it is booted instead of the one from ROM.
-                Play history is automatically updated. */
-            DVDPlayerBoot();
-            break;
-    }
-
     /*  If execution reaches here, SIFRPC has been initialized. You can choose to exit, or do something else.
         But if you do something else that requires SIFRPC, remember to re-initialize SIFRPC first. */
+    int padval = 0;
 
+    padval = ReadCombinedPadStatus();
+
+    if (padval & PAD_CROSS)
+    {
+    if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
+        LoadElf("mc0:/APPS/OPNPS2LD.ELF", "mc0:/APPS/");
+    else if (file_exists("mc1:/APPS/OPNPS2LD.ELF"))
+        LoadElf("mc1:/APPS/OPNPS2LD.ELF", "mc1:/APPS/");
+    }
+
+    if (file_exists("mc0:/BOOT/BOOT.ELF"))
+        LoadElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");
+    else if (file_exists("mc1:/BOOT/BOOT.ELF"))
+        LoadElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");
+
+    else if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
+        LoadElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");
+    else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
+        LoadElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");
     return 0;
 }

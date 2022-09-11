@@ -22,7 +22,7 @@ EE_OBJS = main.o common/libcdvd_add.o common/OSDConfig.o common/OSDInit.o common
 
 EE_INCS := -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I. -Iinclude -Ipsx
 EE_LDFLAGS := -L$(PS2SDK)/ee/lib -nostartfiles -Tlinkfile
-EE_LIBS := -lmc -ldebug -lpatches -lc -lkernel
+EE_LIBS := -lmc -ldebug -lpatches -lc -lkernel -lpadx 
 EE_CFLAGS += -mno-gpopt -G0 -Os -Wall
 
 ifeq ($(WRITE_ICOBYSYS),1)
@@ -63,28 +63,5 @@ $(EE_BIN) : $(EE_OBJS)
 clean:
 	rm -f $(EE_BIN) $(EE_OBJS) $(ICONS_TEMP) $(IOPRP_TEMP)
 
-icon_sys_A.c : icons/icon_A.sys
-	bin2c $< $@ icon_sys_A
-
-icon_sys_J.c : icons/icon_J.sys
-	bin2c $< $@ icon_sys_J
-
-icon_sys_C.c : icons/icon_C.sys
-	bin2c $< $@ icon_sys_C
-
-icobysys_icn.c : icons/icobysys.icn
-	bin2c $< $@ icobysys_icn
-
-sio2man_irx.c : $(PS2SDK)/iop/irx/sio2man.irx
-	bin2c $< $@ sio2man_irx
-
-mcman_irx.c : $(PS2SDK)/iop/irx/mcman.irx
-	bin2c $< $@ mcman_irx
-
-mcserv_irx.c : $(PS2SDK)/iop/irx/mcserv.irx
-	bin2c $< $@ mcserv_irx
-
-ioprp.c : psx/ioprp.img
-	bin2c $< $@ psx_ioprp
-
+include embed.make
 include $(PS2SDK)/Defs.make
