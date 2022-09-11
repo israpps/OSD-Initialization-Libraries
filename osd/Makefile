@@ -47,7 +47,8 @@ ifeq ($(PSX),1)
 else
 	EE_LIBS += -lcdvd
 endif
-
+all: $(EE_BIN_PACKED)
+	@echo done
 %.o : %.c
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
