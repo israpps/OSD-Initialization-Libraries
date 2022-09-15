@@ -56,6 +56,12 @@ IMPORT_BIN2C(sior_irx)
 
 #define MAX_LEN 256
 
+typedef struct
+{
+	int SKIPLOGO;
+}CONFIG;
+CONFIG GLOBCFG;
+
 void RunLoaderElf(char *filename);
 
 void CleanUp(void)
@@ -395,12 +401,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-#define FLG(x) (1 << x)
-enum {
-    SKIP_PS2LOGO = FLG(1)
-} dischandler_flags;
-
-int dischandler(int flags)
+int dischandler()
 {
     int OldDiscType, DiscType, ValidDiscInserted, result;
     u32 stat;
@@ -482,7 +483,7 @@ int dischandler(int flags)
         case SCECdPS2CDDA:
         case SCECdPS2DVD:
             // Boot PlayStation 2 disc
-            PS2DiscBoot(flags & SKIP_PS2LOGO);
+            PS2DiscBoot(GLOBCFG.SKIPLOGO);
             break;
 
         case SCECdDVDV:
