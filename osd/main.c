@@ -31,6 +31,8 @@
 #include "modelname.h"
 #include "pad.h"
 
+void RunLoaderElf(char *filename, char *party);
+
 #define ResetIOP() SifInitRpc(0); while (!SifIopReset("", 0)) {}; while (!SifIopSync()) {}; SifInitRpc(0);
 
 #define IMPORT_BIN2C(_n) \
@@ -105,6 +107,7 @@ static int file_exists(char *filepath)
 	return 1;
 }
 
+#if 0
 void LoadElf(char* filename)
 {
     char* argv[1];
@@ -114,7 +117,6 @@ void LoadElf(char* filename)
     LoadExecPS2(filename, 1, argv);
 }
 
-#if 0
 void LoadElf(char *filename, char* argv[], int argc)
 {
     scr_printf("Loading %s", filename);
@@ -421,22 +423,22 @@ int main(int argc, char *argv[])
     {
         scr_printf("Cross selected... Looking for OPL\n");
         if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
-            {LoadElf("mc0:/APPS/OPNPS2LD.ELF");}
+            {RunLoaderElf("mc0:/APPS/OPNPS2LD.ELF");}
         else if (file_exists("mc1:/APPS/OPNPS2LD.ELF"))
-            {LoadElf("mc1:/APPS/OPNPS2LD.ELF");}
+            {RunLoaderElf("mc1:/APPS/OPNPS2LD.ELF");}
     }
     scr_printf("Looking for DEV1...\n");
 
     if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {LoadElf("mc0:/BOOT/BOOT.ELF");}
+        {RunLoaderElf("mc0:/BOOT/BOOT.ELF");}
     else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {LoadElf("mc1:/BOOT/BOOT.ELF");}
+        {RunLoaderElf("mc1:/BOOT/BOOT.ELF");}
 
     scr_printf("Looking for INFMAN...\n");
     if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
-        {LoadElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
+        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
-        {LoadElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
+        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
         
     return 0;
 }
