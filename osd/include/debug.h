@@ -1,14 +1,13 @@
 #ifndef DEBUG_INCLUDED
 #define DEBUG_INCLUDED
 
-#if defined(DEBUG_EESIO)
+/* change the printf type to whatever you want.
+ * if you use EE_SIO, dont forget to define DEBUG_EESIO so sior.irx is loaded and sio_init() gets called
+ */
+#ifdef DEBUG
 	#define DPRINTF(x...) sio_printf(x)
-#elif defined(DEBUG_PRINTF)
-	#define DPRINTF(x...) printf(x)
-#elif defined (DEBUG_SCR)
-	#define DPRINTF(x...) scr_printf(x)
 #else
 	#define DPRINTF(x...) do {} while(0)
 #endif
-
+/*******************************************/
 #endif
