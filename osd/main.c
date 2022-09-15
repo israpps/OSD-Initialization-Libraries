@@ -423,22 +423,22 @@ int main(int argc, char *argv[])
     {
         scr_printf("Cross selected... Looking for OPL\n");
         if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc0:/APPS/OPNPS2LD.ELF");}
+            {RunLoaderElf("mc0:/APPS/OPNPS2LD.ELF", "mc0:/APPS/");}
         else if (file_exists("mc1:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc1:/APPS/OPNPS2LD.ELF");}
+            {RunLoaderElf("mc1:/APPS/OPNPS2LD.ELF", "mc1:/APPS/");}
     }
     scr_printf("Looking for DEV1...\n");
 
     if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc0:/BOOT/BOOT.ELF");}
+        {RunLoaderElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");}
     else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc1:/BOOT/BOOT.ELF");}
+        {RunLoaderElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
 
     scr_printf("Looking for INFMAN...\n");
     if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
+        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
+        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
         
     return 0;
 }
