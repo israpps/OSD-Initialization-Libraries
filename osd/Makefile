@@ -19,7 +19,7 @@ IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
 ICONS_TEMP = icon_sys_A.c icon_sys_J.c icon_sys_C.c sio2man_irx.c mcman_irx.c mcserv_irx.c
 IOPRP_TEMP = ioprp.c
-EE_OBJS = main.o \
+EE_OBJS = main.o common/elf.o loader_elf.o\
 	common/pad.o common/libcdvd_add.o common/OSDConfig.o common/OSDInit.o common/OSDHistory.o common/dvdplayer.o common/ps1.o common/ps2.o common/modelname.o \
 	$(ICONS) $(IOP_OBJS)
 
@@ -61,14 +61,14 @@ all: $(EE_BIN_PACKED)
 %.o : %.S
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
-#loader/loader.elf: loader
-#	$(MAKE) -C $<
-#
-#loader_elf.c: loader/loader.elf
-#	bin2c $< $@ loader_elf
+loader/loader.elf: loader
+	$(MAKE) -C $<
 
-#loader_elf.o: loader_elf.c
-#	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
+loader_elf.c: loader/loader.elf
+	bin2c $< $@ loader_elf
+
+loader_elf.o: loader_elf.c
+	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
 
 $(EE_BIN) : $(EE_OBJS)
 	$(EE_CC) -T$(PS2SDK)/ee/startup/linkfile $(EE_LDFLAGS) \

@@ -50,7 +50,6 @@ IMPORT_BIN2C(psx_ioprp);
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
     sceCdInit(SCECdEXIT);
-    SifExitCmd();
 }
 
 static void AlarmCallback(s32 alarm_id, u16 time, void *common)
@@ -267,6 +266,13 @@ int main(int argc, char *argv[])
 
     // The old IOP kernel has no support for LoadModuleBuffer. Apply the patch to enable it.
     sbv_patch_enable_lmb();
+
+    /*  The MODLOAD module has a black/white (depends on version) list that determines what devices can have unprotected EE/IOP executables loaded from.
+        Typically, only protected executables can be loaded from user-writable media like the memory card or HDD unit.
+        This patch will disable the black/white list, allowing executables to be freely loaded from any device.
+    */
+    sbv_patch_disable_prefix_check();
+
     /*  Load the SIO2 modules. You may choose to use the ones from ROM,
         but they may not be supported by all PlayStation 2 variants. */
     SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
