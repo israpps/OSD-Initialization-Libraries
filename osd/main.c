@@ -374,9 +374,9 @@ int main(int argc, char *argv[])
     scr_printf("Looking for DEV1...\n");
 
     if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");}
+        {RunLoaderElf("mc0:/BOOT/BOOT.ELF");}
     else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
+        {RunLoaderElf("mc1:/BOOT/BOOT.ELF");}
 
     scr_printf("Looking for INFMAN...\n");
     if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
