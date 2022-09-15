@@ -120,7 +120,7 @@ error:
 // Modified version of loader from Independence
 //	(C) 2003 Marcus R. Brown <mrbrown@0xd6.org>
 //------------------------------
-void RunLoaderElf(char *filename, char *party)
+void RunLoaderElf(char *filename)
 {
 	u8 *boot_elf;
 	elf_header_t *eh;

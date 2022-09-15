@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <kernel.h>
 #include <debug.h>
 #include <fileio.h>
@@ -33,7 +34,7 @@
 
 void RunLoaderElf(char *filename, char *party);
 
-#define ResetIOP() SifInitRpc(0); while (!SifIopReset("", 0)) {}; while (!SifIopSync()) {}; SifInitRpc(0);
+#define MAX_LEN 256
 
 #define IMPORT_BIN2C(_n) \
 extern unsigned char _n[]; \
@@ -44,10 +45,11 @@ IMPORT_BIN2C(mcman_irx)
 IMPORT_BIN2C(mcserv_irx)
 IMPORT_BIN2C(padman_irx)
 
-
 #ifdef PSX
 IMPORT_BIN2C(psx_ioprp);
 #endif
+
+
 
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
@@ -125,7 +127,259 @@ void LoadElf(char *filename, char* argv[], int argc)
 }
 #endif
 
-int dischandler()
+int dischandler();
+//keys to identify line indexes on config file
+enum {DEFAULT = 0, CROSS, CIRCLE, TRIANGLE, SQUARE, R1, L1, R2, L2, DOWN, RIGHT, UP, LEFT, KEYS_COUNT} KEYS;
+
+//default paths for missing data
+const char* DEFPATH[] = {
+    "mc0:/BOOT/BOOT.ELF",
+    "mc1:/BOOT.BOOT.ELF",
+    "mc0:/MATRIXTEAM/MANAGER.ELF",
+    "mc1:/MATRIXTEAM/MANAGER.ELF",
+    "mc0:/APPS/OPNPS2LD.ELF",
+    "mc1:/APPS/OPNPS2LD.ELF",
+}
+const char* COMMANDS[] = {
+    "$DISCLOAD",
+    "$DISCLOAD_NO_PS2LOGO",
+}
+
+
+int main(int argc, char *argv[])
+{
+    char LOADBUF[KEYS_COUNT][MAX_LEN];
+    int result, is_PCMCIA;
+    u32 stat;
+#ifndef PSX
+    int fd;
+    char romver[16], RomName[4], ROMVersionNumStr[5];
+#endif
+
+    // Initialize SIFCMD & SIFRPC
+    SifInitRpc(0);
+
+    // Reboot IOP
+#ifndef PSX
+    while (!SifIopReset("", 0))
+    {
+    };
+#else
+    /* We need some of the PSX's CDVDMAN facilities, but we do not want to use its (too-)new FILEIO module.
+       This special IOPRP image contains a IOPBTCONF list that lists PCDVDMAN instead of CDVDMAN.
+       PCDVDMAN is the board-specific CDVDMAN module on all PSX, which can be used to switch the CD/DVD drive operating mode.
+       Usually, I would discourage people from using board-specific modules, but I do not have a proper replacement for this. */
+    while (!SifIopRebootBuffer(psx_ioprp, size_psx_ioprp)) {};
+#endif
+    while (!SifIopSync())
+    {
+    };
+
+#ifdef PSX
+    InitPSX();
+#endif
+
+    // Initialize SIFCMD & SIFRPC
+    SifInitRpc(0);
+
+    // Initialize SIF services for loading modules and files.
+    SifInitIopHeap();
+    SifLoadFileInit();
+    fioInit();
+
+    // The old IOP kernel has no support for LoadModuleBuffer. Apply the patch to enable it.
+    sbv_patch_enable_lmb();
+
+    /*  The MODLOAD module has a black/white (depends on version) list that determines what devices can have unprotected EE/IOP executables loaded from.
+        Typically, only protected executables can be loaded from user-writable media like the memory card or HDD unit.
+        This patch will disable the black/white list, allowing executables to be freely loaded from any device.
+    */
+    sbv_patch_disable_prefix_check();
+
+    /*  Load the SIO2 modules. You may choose to use the ones from ROM,
+        but they may not be supported by all PlayStation 2 variants. */
+    SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
+    SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
+    SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
+    SifExecModuleBuffer(padman_irx, size_padman_irx, 0, NULL, NULL);
+    // Initialize libmc.
+    mcInit(MC_TYPE_XMC);
+    PadInitPads();
+
+    // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
+    SifLoadModule("rom0:ADDDRV", 0, NULL);
+
+    // Initialize libcdvd & supplement functions (which are not part of the ancient libcdvd library we use).
+    sceCdInit(SCECdINoD);
+    cdInitAdd();
+
+    // Initialize system paths.
+    OSDInitSystemPaths();
+
+    if ((fd = open("rom0:ROMVER", O_RDONLY)) >= 0)
+    {
+        read(fd, romver, sizeof(romver));
+        close(fd);
+    }
+
+#ifndef PSX
+    /*  Perform boot certification to enable the CD/DVD drive.
+        This is not required for the PSX, as its OSDSYS will do it before booting the update. */
+        // e.g. 0160HC = 1,60,'H','C'
+        RomName[0] = (romver[0] - '0') * 10 + (romver[1] - '0');
+        RomName[1] = (romver[2] - '0') * 10 + (romver[3] - '0');
+        RomName[2] = romver[4];
+        RomName[3] = romver[5];
+
+        // Do not check for success/failure. Early consoles do not support (and do not require) boot-certification.
+        sceCdBootCertify(RomName);
+
+    // This disables DVD Video Disc playback. This functionality is restored by loading a DVD Player KELF.
+    /*    Hmm. What should the check for stat be? In v1.xx, it seems to be a check against 0x08. In v2.20, it checks against 0x80.
+          The HDD Browser does not call this function, but I guess it would check against 0x08. */
+    /*  do
+     {
+         sceCdForbidDVDP(&stat);
+     } while (stat & 0x08); */
+#endif
+
+	strncpy(ROMVersionNumStr, romver, 4);
+	ROMVersionNumStr[4] = '\0';
+	bios_version = strtoul(ROMVersionNumStr, NULL, 16);
+    is_PCMCIA = ((bios_version <= 0x120) && (romver[4] == 'J'));
+#if 0
+    is_PROTOKERNEL = ((bios_version <= 0x101) && (romver[4] == 'J'));
+    is_DEX = (romver[5] == 'D');
+#endif
+    // Apply kernel updates for applicable kernels.
+    InitOsd();
+    // Initialize ROM version (must be done first).
+    OSDInitROMVER();
+    // Initialize model name
+    ModelNameInit();
+    // Initialize PlayStation Driver (PS1DRV)
+    PS1DRVInit();
+    // Initialize ROM DVD player.
+    // It is normal for this to fail on consoles that have no DVD ROM chip (i.e. DEX or the SCPH-10000/SCPH-15000).
+    DVDPlayerInit();
+
+    // Load OSD configuration
+    if (OSDConfigLoad() != 0)
+    { // OSD configuration not initialized. Defaults loaded.
+        printf("OSD Configuration not initialized. Defaults loaded.\n");
+    }
+
+    // Applies OSD configuration (saves settings into the EE kernel)
+    OSDConfigApply();
+
+    /*  Try to enable the remote control, if it is enabled.
+        Indicate no hardware support for it, if it cannot be enabled. */
+    do
+    {
+        result = sceCdRcBypassCtl(OSDConfigGetRcGameFunction() ^ 1, &stat);
+        if (stat & 0x100)
+        { // Not supported by the PlayStation 2.
+            // Note: it does not seem like the browser updates the NVRAM here to change this status.
+            OSDConfigSetRcEnabled(0);
+            OSDConfigSetRcSupported(0);
+            break;
+        }
+    } while ((stat & 0x80) || (result == 0));
+
+    // Remember to set the video output option (RGB or Y Cb/Pb Cr/Pr) accordingly, before SetGsCrt() is called.
+    SetGsVParam(OSDConfigGetVideoOutput() == VIDEO_OUTPUT_RGB ? 0 : 1);
+
+    init_scr();
+    /*
+    scr_printf("SIDIF Mode:\t%u\n"
+               "Screen type:\t%u\n"
+               "Video mode:\t%u\n"
+               "Language:\t%u\n"
+               "PS1DRV config:\t0x%02x\n"
+               "Timezone offset:\t%u\n"
+               "Daylight savings:\t%u\n"
+               "Time format:\t%u\n"
+               "Date format:\t%u\n",
+               OSDConfigGetSPDIF(),
+               OSDConfigGetScreenType(),
+               OSDConfigGetVideoOutput(),
+               OSDConfigGetLanguage(),
+               OSDConfigGetPSConfig(),
+               OSDConfigGetTimezoneOffset(),
+               OSDConfigGetDaylightSaving(),
+               OSDConfigGetTimeFormat(),
+               OSDConfigGetDateFormat());
+    */
+
+    /*    If required, make any changes with the getter/setter functions in OSDConfig.h, before calling OSDConfigSave(1).
+    Example: */
+/*     OSDConfigSetScreenType(TV_SCREEN_169);
+    OSDConfigSave(0);
+    OSDConfigApply(); */
+
+    scr_printf("\nModel:\t\t%s\n"
+               "PlayStation Driver:\t%s\n"
+               "DVD Player:\t%s\n",
+               ModelNameGet(),
+               PS1DRVGetVersion(),
+               DVDPlayerGetVersion());
+
+    
+    FILE* fp;
+    fp = fopen("mc0:/PS2RB/LAUNCHER.CNF", "r");
+    if (fp == NULL) {
+        fp = fopen("mc1:/PS2RB/LAUNCHER.CNF", "r");
+        if (fp == NULL) {
+            for(int x=0; x < 6; x++)
+            {
+                if (file_exists(DEFPATH[x]))
+                    RunLoaderElf(DEFPATH[x]);
+            }
+        }
+    }
+    
+    int count = DEFAULT;
+    char buffer[MAX_LEN];
+    while (fgets(buffer, MAX_LEN, fp) && (count < KEYS_COUNT))
+    {
+        // Remove trailing newline
+        buffer[strcspn(buffer, "\n")] = 0;
+        //printf("%s\n", buffer);
+        strcpy(LOADBUF[count], buffer);
+        count++;
+    }
+
+    fclose(fp);
+
+    int padval = 0;
+    scr_printf("PadRead...\n");
+    padval = ReadCombinedPadStatus();
+
+    if (!is_PCMCIA)
+        PadDeinitPads();
+
+    scr_printf("Looking for DEV1...\n");
+
+    if (file_exists("mc0:/BOOT/BOOT.ELF"))
+        {RunLoaderElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");}
+    else if (file_exists("mc1:/BOOT/BOOT.ELF"))
+        {RunLoaderElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
+
+    scr_printf("Looking for INFMAN...\n");
+    if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
+        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
+    else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
+        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
+        
+    return 0;
+}
+
+#define FLG(x) (1 << x)
+enum {
+    SKIP_PS2LOGO = FLG(1)
+} dischandler_flags;
+
+int dischandler(int flags)
 {
     int OldDiscType, DiscType, ValidDiscInserted, result;
     u32 stat;
@@ -207,7 +461,7 @@ int dischandler()
         case SCECdPS2CDDA:
         case SCECdPS2DVD:
             // Boot PlayStation 2 disc
-            PS2DiscBoot();
+            PS2DiscBoot(flags & SKIP_PS2LOGO);
             break;
 
         case SCECdDVDV:
@@ -223,222 +477,5 @@ int dischandler()
             DVDPlayerBoot();
             break;
     }
-    return 0;
-}
-
-int main(int argc, char *argv[])
-{
-    int result;
-    u32 stat;
-#ifndef PSX
-    int fd;
-    char romver[16], RomName[4];
-#endif
-
-    // Initialize SIFCMD & SIFRPC
-    SifInitRpc(0);
-
-    // Reboot IOP
-#ifndef PSX
-    while (!SifIopReset("", 0))
-    {
-    };
-#else
-    /* We need some of the PSX's CDVDMAN facilities, but we do not want to use its (too-)new FILEIO module.
-       This special IOPRP image contains a IOPBTCONF list that lists PCDVDMAN instead of CDVDMAN.
-       PCDVDMAN is the board-specific CDVDMAN module on all PSX, which can be used to switch the CD/DVD drive operating mode.
-       Usually, I would discourage people from using board-specific modules, but I do not have a proper replacement for this. */
-    while (!SifIopRebootBuffer(psx_ioprp, size_psx_ioprp)) {};
-#endif
-    while (!SifIopSync())
-    {
-    };
-
-#ifdef PSX
-    InitPSX();
-#endif
-
-    // Initialize SIFCMD & SIFRPC
-    SifInitRpc(0);
-
-    // Initialize SIF services for loading modules and files.
-    SifInitIopHeap();
-    SifLoadFileInit();
-    fioInit();
-
-    // The old IOP kernel has no support for LoadModuleBuffer. Apply the patch to enable it.
-    sbv_patch_enable_lmb();
-
-    /*  The MODLOAD module has a black/white (depends on version) list that determines what devices can have unprotected EE/IOP executables loaded from.
-        Typically, only protected executables can be loaded from user-writable media like the memory card or HDD unit.
-        This patch will disable the black/white list, allowing executables to be freely loaded from any device.
-    */
-    sbv_patch_disable_prefix_check();
-
-    /*  Load the SIO2 modules. You may choose to use the ones from ROM,
-        but they may not be supported by all PlayStation 2 variants. */
-    SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
-    SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
-    SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
-    SifExecModuleBuffer(padman_irx, size_padman_irx, 0, NULL, NULL);
-    // Initialize libmc.
-    mcInit(MC_TYPE_XMC);
-
-    PadInitPads();
-
-    // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
-    SifLoadModule("rom0:ADDDRV", 0, NULL);
-
-    // Initialize libcdvd & supplement functions (which are not part of the ancient libcdvd library we use).
-    sceCdInit(SCECdINoD);
-    cdInitAdd();
-
-    // Initialize system paths.
-    OSDInitSystemPaths();
-
-#ifndef PSX
-    /*  Perform boot certification to enable the CD/DVD drive.
-        This is not required for the PSX, as its OSDSYS will do it before booting the update. */
-    if ((fd = open("rom0:ROMVER", O_RDONLY)) >= 0)
-    {
-        read(fd, romver, sizeof(romver));
-        close(fd);
-
-        // e.g. 0160HC = 1,60,'H','C'
-        RomName[0] = (romver[0] - '0') * 10 + (romver[1] - '0');
-        RomName[1] = (romver[2] - '0') * 10 + (romver[3] - '0');
-        RomName[2] = romver[4];
-        RomName[3] = romver[5];
-
-        // Do not check for success/failure. Early consoles do not support (and do not require) boot-certification.
-        sceCdBootCertify(RomName);
-    }
-
-    // This disables DVD Video Disc playback. This functionality is restored by loading a DVD Player KELF.
-    /*    Hmm. What should the check for stat be? In v1.xx, it seems to be a check against 0x08. In v2.20, it checks against 0x80.
-          The HDD Browser does not call this function, but I guess it would check against 0x08. */
-    /*  do
-     {
-         sceCdForbidDVDP(&stat);
-     } while (stat & 0x08); */
-#endif
-
-    // Apply kernel updates for applicable kernels.
-    InitOsd();
-
-    // Initialize ROM version (must be done first).
-    OSDInitROMVER();
-
-    // Initialize model name
-    ModelNameInit();
-
-    // Initialize PlayStation Driver (PS1DRV)
-    PS1DRVInit();
-
-    // Initialize ROM DVD player.
-    // It is normal for this to fail on consoles that have no DVD ROM chip (i.e. DEX or the SCPH-10000/SCPH-15000).
-    DVDPlayerInit();
-
-    // Load OSD configuration
-    if (OSDConfigLoad() != 0)
-    { // OSD configuration not initialized. Defaults loaded.
-        printf("OSD Configuration not initialized. Defaults loaded.\n");
-    }
-
-    // Applies OSD configuration (saves settings into the EE kernel)
-    OSDConfigApply();
-
-    /*  Try to enable the remote control, if it is enabled.
-        Indicate no hardware support for it, if it cannot be enabled. */
-    do
-    {
-        result = sceCdRcBypassCtl(OSDConfigGetRcGameFunction() ^ 1, &stat);
-        if (stat & 0x100)
-        { // Not supported by the PlayStation 2.
-            // Note: it does not seem like the browser updates the NVRAM here to change this status.
-            OSDConfigSetRcEnabled(0);
-            OSDConfigSetRcSupported(0);
-            break;
-        }
-    } while ((stat & 0x80) || (result == 0));
-
-    // Remember to set the video output option (RGB or Y Cb/Pb Cr/Pr) accordingly, before SetGsCrt() is called.
-    SetGsVParam(OSDConfigGetVideoOutput() == VIDEO_OUTPUT_RGB ? 0 : 1);
-
-    init_scr();
-    /*
-    scr_printf("SIDIF Mode:\t%u\n"
-               "Screen type:\t%u\n"
-               "Video mode:\t%u\n"
-               "Language:\t%u\n"
-               "PS1DRV config:\t0x%02x\n"
-               "Timezone offset:\t%u\n"
-               "Daylight savings:\t%u\n"
-               "Time format:\t%u\n"
-               "Date format:\t%u\n",
-               OSDConfigGetSPDIF(),
-               OSDConfigGetScreenType(),
-               OSDConfigGetVideoOutput(),
-               OSDConfigGetLanguage(),
-               OSDConfigGetPSConfig(),
-               OSDConfigGetTimezoneOffset(),
-               OSDConfigGetDaylightSaving(),
-               OSDConfigGetTimeFormat(),
-               OSDConfigGetDateFormat());
-    */
-
-    /*    If required, make any changes with the getter/setter functions in OSDConfig.h, before calling OSDConfigSave(1).
-    Example: */
-/*     OSDConfigSetScreenType(TV_SCREEN_169);
-    OSDConfigSave(0);
-    OSDConfigApply(); */
-
-    scr_printf("\nModel:\t\t%s\n"
-               "PlayStation Driver:\t%s\n"
-               "DVD Player:\t%s\n",
-               ModelNameGet(),
-               PS1DRVGetVersion(),
-               DVDPlayerGetVersion());
-
-
-    /*  Update Play History (if required)
-        This is now more of a FYI, since the DVD and PS/PS2 game disc-booting code will do it for you.
-        Provide the boot filename (without the ";1" suffix) for PlayStation/PlayStation 2 games. */
-    // UpdatePlayHistory("SLPM_550.52");
-
-    /*  If the user chose to have diagnosis enabled, it can be enabled/disabled at any time.
-        The browser does this in the background, but this is put here to show how it is done.
-
-        Hmm. What should the check for stat be? In v1.xx, it seems to be a check against 0x08. In v2.20, it checks against 0x80.
-        The HDD browser checks for 0x08.
-        But because we are targeting all consoles, it would be probably safer to follow the HDD Browser. */
-    /*  If execution reaches here, SIFRPC has been initialized. You can choose to exit, or do something else.
-        But if you do something else that requires SIFRPC, remember to re-initialize SIFRPC first. */
-    
-    int padval = 0;
-    scr_printf("PadRead...\n");
-    padval = ReadCombinedPadStatus();
-    PadDeinitPads();
-    if (padval & PAD_CROSS)
-    {
-        scr_printf("Cross selected... Looking for OPL\n");
-        if (file_exists("mc0:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc0:/APPS/OPNPS2LD.ELF", "mc0:/APPS/");}
-        else if (file_exists("mc1:/APPS/OPNPS2LD.ELF"))
-            {RunLoaderElf("mc1:/APPS/OPNPS2LD.ELF", "mc1:/APPS/");}
-    }
-    scr_printf("Looking for DEV1...\n");
-
-    if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc0:/BOOT/BOOT.ELF", "mc0:/BOOT/");}
-    else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc1:/BOOT/BOOT.ELF", "mc1:/BOOT/");}
-
-    scr_printf("Looking for INFMAN...\n");
-    if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF", "mc0:/MATRIXTEAM/");}
-    else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF", "mc1:/MATRIXTEAM/");}
-        
     return 0;
 }

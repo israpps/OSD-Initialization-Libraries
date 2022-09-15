@@ -236,7 +236,7 @@ static int PS2GetBootFile(char *boot)
 /*  While this function uses sceCdReadKey() to obtain the filename,
     it is possible to actually parse SYSTEM.CNF and get the boot filename from BOOT2.
     Lots of homebrew software do that. */
-int PS2DiscBoot(void)
+int PS2DiscBoot(int skip_PS2LOGO)
 {
     char ps2disc_boot[CNF_PATH_LEN_MAX] = "";             // This was originally static/global.
     char system_cnf[CNF_LEN_MAX], line[CNF_PATH_LEN_MAX]; // These were originally globals/static.
@@ -307,10 +307,9 @@ int PS2DiscBoot(void)
     UpdatePlayHistory(ps2disc_boot);
 
     SifExitCmd();
-#ifndef NO_PS2LOGO
-    LoadExecPS2("rom0:PS2LOGO", 1, args);
-#else
-    LoadExecPS2(ps2disc_boot, 0, NULL); 
-#endif
+    if (skip_PS2LOGO)
+        LoadExecPS2(ps2disc_boot, 0, NULL);
+    else
+        LoadExecPS2("rom0:PS2LOGO", 1, args);
     return 0;
 }
