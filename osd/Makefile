@@ -15,13 +15,13 @@ PSX ?= 0
 EE_BIN ?= example.elf
 EE_BIN_PACKED = SC-$(EE_BIN)
 EE_BIN_STRIPPED = S-$(EE_BIN)
-IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o
+IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o 
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
 ICONS_TEMP = icon_sys_A.c icon_sys_J.c icon_sys_C.c sio2man_irx.c mcman_irx.c mcserv_irx.c
 IOPRP_TEMP = ioprp.c
-EE_OBJS = main.o common/elf.o loader_elf.o\
+EE_OBJS = main.o common/elf.o common/cnfman.o \
 	common/pad.o common/libcdvd_add.o common/OSDConfig.o common/OSDInit.o common/OSDHistory.o common/dvdplayer.o common/ps1.o common/ps2.o common/modelname.o \
-	$(ICONS) $(IOP_OBJS)
+	$(ICONS) $(IOP_OBJS) loader_elf.o 
 
 EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I. -Iinclude -Ipsx
 EE_LDFLAGS := -L$(PS2SDK)/ee/lib -nostartfiles -Tlinkfile
@@ -49,6 +49,13 @@ ifeq ($(PSX),1)
 else
 	EE_LIBS += -lcdvd
 endif
+
+ifeq ($(DEBUG_EESIO),1)
+	EE_CFLAGS += -DDEBUG_EESIO -DDEBUG_PRINTF
+	IOP_OBJS += sior_irx.o
+	EE_LIBS += -lsior
+endif
+
 all: $(EE_BIN_PACKED)
 	@echo done
 

@@ -24,3 +24,6 @@ padman_irx.c: $(PS2SDK)/iop/irx/freepad.irx
 	
 ioprp.c : psx/ioprp.img
 	bin2c $< $@ psx_ioprp
+
+sior_irx.c: $(PS2SDK)/iop/irx/sior.irx
+	bin2c $< $@ sior_irx

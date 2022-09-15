@@ -36,7 +36,7 @@
 #include "modelname.h"
 #include "pad.h"
 #include "cnfman.h"
-#include "debug.h"
+#include "debugprintf.h"
 
 #define IMPORT_BIN2C(_n) extern unsigned char _n[]; extern unsigned int size_ ## _n;
 
