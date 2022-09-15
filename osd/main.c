@@ -55,7 +55,7 @@ IMPORT_BIN2C(sior_irx)
 
 #define MAX_LEN 256
 
-void RunLoaderElf(char *filename, char *party);
+void RunLoaderElf(char *filename);
 
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
@@ -159,7 +159,7 @@ char* COMMANDS[] = {
 int main(int argc, char *argv[])
 {
     char LOADBUF[KEYS_COUNT][MAX_LEN];
-    int result, is_PCMCIA, ret;
+    int result, is_PCMCIA, ret, x=0;
 	unsigned long int bios_version;
     u32 stat;
     int fd;
@@ -352,7 +352,7 @@ int main(int argc, char *argv[])
         fp = fopen("mc1:/PS2RB/LAUNCHER.CNF", "r");
         if (fp == NULL) {
 			DPRINTF("Cant load config from mc1\n");
-            for(int x=0; x < DEFPATH_CNT; x++)
+            for(x=0; x < DEFPATH_CNT; x++)
             {
                 if (file_exists(DEFPATH[x]))
                     RunLoaderElf(DEFPATH[x]);
@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
         {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
 
 	DPRINTF("END OF CONTROL REACHED; DEFAULTS TO EMBEDDED PATHS!\n");
-    for(int x=0; x < DEFPATH_CNT; x++)
+    for(x=0; x < DEFPATH_CNT; x++)
     {
 		if (file_exists(DEFPATH[x]))
 			RunLoaderElf(DEFPATH[x]);
