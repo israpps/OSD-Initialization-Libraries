@@ -18,6 +18,10 @@
 
 #include <sbv_patches.h>
 
+#ifdef DEBUG_EESIO
+#include <sior.h>
+#endif
+
 #include "main.h"
 #include "libcdvd_add.h"
 #ifdef PSX
@@ -31,25 +35,27 @@
 #include "ps2.h"
 #include "modelname.h"
 #include "pad.h"
+#include "cnfman.h"
 
-void RunLoaderElf(char *filename, char *party);
+#define IMPORT_BIN2C(_n) extern unsigned char _n[]; extern unsigned int size_ ## _n;
 
-#define MAX_LEN 256
 
-#define IMPORT_BIN2C(_n) \
-extern unsigned char _n[]; \
-extern unsigned int size_ ## _n;
 
 IMPORT_BIN2C(sio2man_irx)
 IMPORT_BIN2C(mcman_irx)
 IMPORT_BIN2C(mcserv_irx)
 IMPORT_BIN2C(padman_irx)
-
 #ifdef PSX
-IMPORT_BIN2C(psx_ioprp);
+IMPORT_BIN2C(psx_ioprp)
+#endif
+#ifdef DEBUG_EESIO
+IMPORT_BIN2C(sior_irx)
 #endif
 
 
+#define MAX_LEN 256
+
+void RunLoaderElf(char *filename, char *party);
 
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
@@ -132,29 +138,32 @@ int dischandler();
 enum {DEFAULT = 0, CROSS, CIRCLE, TRIANGLE, SQUARE, R1, L1, R2, L2, DOWN, RIGHT, UP, LEFT, KEYS_COUNT} KEYS;
 
 //default paths for missing data
-const char* DEFPATH[] = {
+enum { WLEAPPmc0=0, WLEAPPmc1, DEV1mc0, DEV1mc1, INFMANmc0, INFMANmc1, OPLAPPmc0, OPLAPPmc1, DEFPATH_CNT} DEFPATH_ENUM;
+char* DEFPATH[] = {
+    "mc0:/APPS/ULE.ELF",
+    "mc1:/APPS/ULE.ELF",
     "mc0:/BOOT/BOOT.ELF",
     "mc1:/BOOT.BOOT.ELF",
     "mc0:/MATRIXTEAM/MANAGER.ELF",
     "mc1:/MATRIXTEAM/MANAGER.ELF",
     "mc0:/APPS/OPNPS2LD.ELF",
     "mc1:/APPS/OPNPS2LD.ELF",
-}
-const char* COMMANDS[] = {
+};
+
+char* COMMANDS[] = {
     "$DISCLOAD",
     "$DISCLOAD_NO_PS2LOGO",
-}
+};
 
 
 int main(int argc, char *argv[])
 {
     char LOADBUF[KEYS_COUNT][MAX_LEN];
-    int result, is_PCMCIA;
+    int result, is_PCMCIA, ret;
+	unsigned long int bios_version;
     u32 stat;
-#ifndef PSX
     int fd;
     char romver[16], RomName[4], ROMVersionNumStr[5];
-#endif
 
     // Initialize SIFCMD & SIFRPC
     SifInitRpc(0);
@@ -196,8 +205,7 @@ int main(int argc, char *argv[])
     */
     sbv_patch_disable_prefix_check();
 
-    /*  Load the SIO2 modules. You may choose to use the ones from ROM,
-        but they may not be supported by all PlayStation 2 variants. */
+    /*  Load SDK modules to avoid different behavior across different models*/
     SifExecModuleBuffer(sio2man_irx, size_sio2man_irx, 0, NULL, NULL);
     SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
     SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
@@ -206,11 +214,24 @@ int main(int argc, char *argv[])
     mcInit(MC_TYPE_XMC);
     PadInitPads();
 
+#ifdef DEBUG_EESIO
+	int id;
+	// I call this just after SIO2MAN have been loaded
+	sio_init(38400, 0, 0, 0, 0);
+	DPRINTF("Hello from EE SIO!\n");
+
+	SIOR_Init(0x20);
+
+	id = SifExecModuleBuffer(sior_irx, size_sior_irx, 0, NULL, &ret);
+	DPRINTF("\tsior id=%d _start ret=%d\n", id, ret);
+#endif
+
     // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
     SifLoadModule("rom0:ADDDRV", 0, NULL);
 
     // Initialize libcdvd & supplement functions (which are not part of the ancient libcdvd library we use).
-    sceCdInit(SCECdINoD);
+    DPRINTF("initializing libcdvd & supplements\n");
+	sceCdInit(SCECdINoD);
     cdInitAdd();
 
     // Initialize system paths.
@@ -231,8 +252,8 @@ int main(int argc, char *argv[])
         RomName[2] = romver[4];
         RomName[3] = romver[5];
 
-        // Do not check for success/failure. Early consoles do not support (and do not require) boot-certification.
-        sceCdBootCertify(RomName);
+        ret = sceCdBootCertify(RomName);// Do not check for success/failure. Early consoles do not support (and do not require) boot-certification.
+        DPRINTF("CDVD Drive boot certification performed (%d)\n", ret);
 
     // This disables DVD Video Disc playback. This functionality is restored by loading a DVD Player KELF.
     /*    Hmm. What should the check for stat be? In v1.xx, it seems to be a check against 0x08. In v2.20, it checks against 0x80.
@@ -251,6 +272,7 @@ int main(int argc, char *argv[])
     is_PROTOKERNEL = ((bios_version <= 0x101) && (romver[4] == 'J'));
     is_DEX = (romver[5] == 'D');
 #endif
+	DPRINTF("ROM Version=%x, region=%c, Machine type=%c", bios_version, romver[4], romver[5]);
     // Apply kernel updates for applicable kernels.
     InitOsd();
     // Initialize ROM version (must be done first).
@@ -266,7 +288,7 @@ int main(int argc, char *argv[])
     // Load OSD configuration
     if (OSDConfigLoad() != 0)
     { // OSD configuration not initialized. Defaults loaded.
-        printf("OSD Configuration not initialized. Defaults loaded.\n");
+        DPRINTF("OSD Configuration not initialized. Defaults loaded.\n");
     }
 
     // Applies OSD configuration (saves settings into the EE kernel)
@@ -290,26 +312,24 @@ int main(int argc, char *argv[])
     SetGsVParam(OSDConfigGetVideoOutput() == VIDEO_OUTPUT_RGB ? 0 : 1);
 
     init_scr();
-    /*
-    scr_printf("SIDIF Mode:\t%u\n"
-               "Screen type:\t%u\n"
-               "Video mode:\t%u\n"
-               "Language:\t%u\n"
-               "PS1DRV config:\t0x%02x\n"
-               "Timezone offset:\t%u\n"
-               "Daylight savings:\t%u\n"
-               "Time format:\t%u\n"
-               "Date format:\t%u\n",
-               OSDConfigGetSPDIF(),
-               OSDConfigGetScreenType(),
-               OSDConfigGetVideoOutput(),
-               OSDConfigGetLanguage(),
-               OSDConfigGetPSConfig(),
-               OSDConfigGetTimezoneOffset(),
-               OSDConfigGetDaylightSaving(),
-               OSDConfigGetTimeFormat(),
-               OSDConfigGetDateFormat());
-    */
+    DPRINTF(	"SIDIF Mode:\t%u\n"
+				"Screen type:\t%u\n"
+				"Video mode:\t%u\n"
+				"Language:\t%u\n"
+				"PS1DRV config:\t0x%02x\n"
+				"Timezone offset:\t%u\n"
+				"Daylight savings:\t%u\n"
+				"Time format:\t%u\n"
+				"Date format:\t%u\n",
+				OSDConfigGetSPDIF(),
+				OSDConfigGetScreenType(),
+				OSDConfigGetVideoOutput(),
+				OSDConfigGetLanguage(),
+				OSDConfigGetPSConfig(),
+				OSDConfigGetTimezoneOffset(),
+				OSDConfigGetDaylightSaving(),
+				OSDConfigGetTimeFormat(),
+				OSDConfigGetDateFormat());
 
     /*    If required, make any changes with the getter/setter functions in OSDConfig.h, before calling OSDConfigSave(1).
     Example: */
@@ -328,9 +348,11 @@ int main(int argc, char *argv[])
     FILE* fp;
     fp = fopen("mc0:/PS2RB/LAUNCHER.CNF", "r");
     if (fp == NULL) {
+		DPRINTF("Cant load config from mc0\n");
         fp = fopen("mc1:/PS2RB/LAUNCHER.CNF", "r");
         if (fp == NULL) {
-            for(int x=0; x < 6; x++)
+			DPRINTF("Cant load config from mc1\n");
+            for(int x=0; x < DEFPATH_CNT; x++)
             {
                 if (file_exists(DEFPATH[x]))
                     RunLoaderElf(DEFPATH[x]);
@@ -338,16 +360,7 @@ int main(int argc, char *argv[])
         }
     }
     
-    int count = DEFAULT;
-    char buffer[MAX_LEN];
-    while (fgets(buffer, MAX_LEN, fp) && (count < KEYS_COUNT))
-    {
-        // Remove trailing newline
-        buffer[strcspn(buffer, "\n")] = 0;
-        //printf("%s\n", buffer);
-        strcpy(LOADBUF[count], buffer);
-        count++;
-    }
+	
 
     fclose(fp);
 
@@ -370,7 +383,14 @@ int main(int argc, char *argv[])
         {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
     else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
         {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
-        
+
+	DPRINTF("END OF CONTROL REACHED; DEFAULTS TO EMBEDDED PATHS!\n");
+    for(int x=0; x < DEFPATH_CNT; x++)
+    {
+		if (file_exists(DEFPATH[x]))
+			RunLoaderElf(DEFPATH[x]);
+	}
+
     return 0;
 }
 
@@ -429,7 +449,7 @@ int dischandler(int flags)
                     break;
 
                 case SCECdCDDA:
-                    scr_printf("Audio Disc (not supported by this demo)\n");
+                    scr_printf("Audio Disc (not supported by this program)\n");
                     break;
 
                 case SCECdDVDV:
