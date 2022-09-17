@@ -57,21 +57,29 @@ IMPORT_BIN2C(sior_irx)
 typedef struct
 {
 	int SKIPLOGO;
-    char AUTO[3][MAX_LEN];
-    char CROSS[3][MAX_LEN];
-    char CIRCLE[3][MAX_LEN];
-    char TRIANGLE[3][MAX_LEN];
-    char SQUARE[3][MAX_LEN];
-    char DOWN[3][MAX_LEN];
-    char RIGHT[3][MAX_LEN];
-    char UP[3][MAX_LEN];
-    char LEFT[3][MAX_LEN];
-    char L1[3][MAX_LEN];
-    char L2[3][MAX_LEN];
-    char R1[3][MAX_LEN];
-    char R2[3][MAX_LEN];
+    char *KEYPATHS[17][3]
 }CONFIG;
 CONFIG GLOBCFG;
+
+char KEYS_ID[17][10] = {
+    "AUTO",
+    "SELECT",    // 0x0001
+    "L3",        // 0x0002
+    "R3",        // 0x0004
+    "START",     // 0x0008
+    "UP",        // 0x0010
+    "RIGHT",     // 0x0020
+    "DOWN",      // 0x0040
+    "LEFT",      // 0x0080
+    "L2",        // 0x0100
+    "R2",        // 0x0200
+    "L1",        // 0x0400
+    "R1",        // 0x0800
+    "TRIANGLE",  // 0x1000
+    "CIRCLE",    // 0x2000
+    "CROSS",     // 0x4000
+    "SQUARE"     // 0x8000
+};
 
 void RunLoaderElf(char *filename);
 
@@ -133,38 +141,27 @@ static int file_exists(char *filepath)
 	return 1;
 }
 
-#if 0
-void LoadElf(char* filename)
-{
-    char* argv[1];
-    argv[0] = filename;
-    scr_printf("Loading %s", filename);
-    CleanUp();
-    LoadExecPS2(filename, 1, argv);
-}
-
-void LoadElf(char *filename, char* argv[], int argc)
-{
-    scr_printf("Loading %s", filename);
-    SifExitCmd();
-    LoadExecPS2(filename, argc, argv);
-}
-#endif
-
 int dischandler();
-//keys to identify line indexes on config file
+
 enum {SOURCE_INVALID = 0, SOURCE_MC0, SOURCE_MC1, SOURCE_MASS} CONFIG_SOURCES_ID;
-//default paths for missing data
+
 enum { WLEAPPmc0=0, WLEAPPmc1, DEV1mc0, DEV1mc1, INFMANmc0, INFMANmc1, OPLAPPmc0, OPLAPPmc1, DEFPATH_CNT} DEFPATH_ENUM;
 char* DEFPATH[] = {
-    "mc0:/APPS/ULE.ELF",
-    "mc1:/APPS/ULE.ELF",
-    "mc0:/BOOT/BOOT.ELF",
-    "mc1:/BOOT.BOOT.ELF",
-    "mc0:/MATRIXTEAM/MANAGER.ELF",
-    "mc1:/MATRIXTEAM/MANAGER.ELF",
-    "mc0:/APPS/OPNPS2LD.ELF",
-    "mc1:/APPS/OPNPS2LD.ELF",
+    "mc?:/BOOT/ULE.ELF",  // AUTO [0]
+    "mc?:/BOOT/BOOT2.ELF",
+    "mc?:/APPS/ULE.ELF",
+    "mass:/BOOT/BOOT4.ELF",  // L2 [3]
+    "mc?:/BOOT/BOOT4.ELF",
+    "mc?:/B?DATA-SYSTEM/BOOT4.ELF",
+    "mass:/BOOT/BOOT2.ELF",  // R2 [6]
+    "mc?:/BOOT/BOOT2.ELF",
+    "mc?:/B?DATA-SYSTEM/BOOT2.ELF",
+    "mass:/BOOT/OPNPS2LD.ELF",  // L1 [9]
+    "mc?:/BOOT/OPNPS2LD.ELF",
+    "mc?:/APPS/OPNPS2LD.ELF",
+    "mass:/RESCUE.ELF",  // R1 [12]
+    "mc?:/BOOT/BOOT1.ELF",
+    "mc?:/B?DATA-SYSTEM/BOOT1.ELF",
 };
 enum {DISCLOAD = 0} COMMANDS_ENUM;
 char* COMMANDS[] = {
@@ -174,13 +171,12 @@ char* COMMANDS[] = {
 
 int main(int argc, char *argv[])
 {
-    char LOADBUF[KEYS_COUNT *3 ][MAX_LEN]; // KEYS_COUNT*3 because we want 3 paths for each key
     int result, is_PCMCIA, ret, x=0, config_source = SOURCE_INVALID, cnf_size = 0;
 	unsigned long int bios_version;
     u32 stat;
     int fd;
     char romver[16], RomName[4], ROMVersionNumStr[5];
-    char* CNFBUFF, name, value;
+    char *CNFBUFF, *name, *value;
 
     // Initialize SIFCMD & SIFRPC
     SifInitRpc(0);
@@ -374,139 +370,41 @@ int main(int argc, char *argv[])
             config_source = SOURCE_INVALID;
         } else {config_source = SOURCE_MC1;}
     } else {config_source = SOURCE_MC0;}
-    
-    cnf_size = fseek(fp, 0, SEEK_END);
-    fseek(fp, 0, SEEK_SET);
 
-    CNFBUFF = malloc(cnf_size + 1);
-    CNFBUFF[cnf_size+1] = '\0';
-    fread(CNFBUFF, cnf_size, 1, fp);
-    fclose(fp);
-    int var_cnt = 0;
-    char TMP[64];
-    for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
-        if (!strcmp("SKIP_PS2LOGO", name))
-            GLOBCFG.SKIPLOGO = atoi(value);
+    if (config_source != SOURCE_INVALID)
+    {
+        cnf_size = fseek(fp, 0, SEEK_END);
+        fseek(fp, 0, SEEK_SET);
 
-        if (!strncmp("AUTO_", name, strlen("AUTO_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "AUTO_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.AUTO[x] = value;
-            }
+        CNFBUFF = malloc(cnf_size + 1);
+        CNFBUFF[cnf_size+1] = '\0';
+        fread(CNFBUFF, cnf_size, 1, fp);
+        fclose(fp);
+        int var_cnt = 0;
+        char TMP[64];
+        for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
+            if (!strcmp("SKIP_PS2LOGO", name))
+                GLOBCFG.SKIPLOGO = atoi(value);
+
+	    	for (i = 0; i < 17; i++) {
+	    		for (j = 0; j < 3; j++) {
+	    			sprintf(TMP, "LK_%s_E%d", LK_ID[i], j + 1);
+	    			if (!strcmp(name, TMP)) {
+	    				GLOBCFG.KEYPATHS[i][j] = value;
+	    				break;
+	    			}
+	    		}
+	    	}
+
         }
-        if (!strncmp("CROSS_", name, strlen("CROSS_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "CROSS_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.CROSS[x] = value;
-            }
-        }
-        if (!strncmp("CIRCLE", name, strlen("CIRCLE_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "CIRCLE_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.CIRCLE[x] = value;
-            }
-        }
-        if (!strncmp("TRIANGLE_", name, strlen("TRIANGLE_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "TRIANGLE_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.TRIANGLE[x] = value;
-            }
-        }
-        if (!strncmp("SQUARE_", name, strlen("SQUARE_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "SQUARE_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.SQUARE[x] = value;
-            }
-        }
-        if (!strncmp("DOWN_", name, strlen("DOWN_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "DOWN_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.DOWN[x] = value;
-            }
-        }
-        if (!strncmp("RIGHT_", name, strlen("RIGHT_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "RIGHT_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.RIGHT[x] = value;
-            }
-        }
-        if (!strncmp("UP_", name, strlen("UP_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "UP_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.UP[x] = value;
-            }
-        }
-        if (!strncmp("LEFT_", name, strlen("LEFT_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "LEFT_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.LEFT[x] = value;
-            }
-        }
-        if (!strncmp("L1_", name, strlen("L1_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "L1_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.L1[x] = value;
-            }
-        }
-        if (!strncmp("L2_", name, strlen("L2_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "L2_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.L2[x] = value;
-            }
-        }
-        if (!strncmp("R1_", name, strlen("R1_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "R1_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.R1[x] = value;
-            }
-        }
-        if (!strncmp("R2_", name, strlen("R2_")))
-        {
-            for (x=0; x<3; x++)
-            {
-                sprintf(TMP, "R2_%d", x);
-                if (!strcmp(TMP, name))
-                    GLOBCFG.R2[x] = value;
-            }
-        }
+        free(CNFBUFF);
+    } 
+    else
+    {
+		for (i = 0; i < 5; i++)
+			for (j = 0; j < 3; j++)
+				GLOBCFG.KEYPATHS[i][j] = DEFPATH[3 * i + j];
     }
-    free(CNFBUFF);
     int padval = 0;
     scr_printf("PadRead...\n");
     padval = ReadCombinedPadStatus();
@@ -516,11 +414,7 @@ int main(int argc, char *argv[])
 
 
 	DPRINTF("END OF CONTROL REACHED; DEFAULTS TO EMBEDDED PATHS!\n");
-    for(x=0; x < DEFPATH_CNT; x++)
-    {
-		if (file_exists(DEFPATH[x]))
-			RunLoaderElf(DEFPATH[x]);
-	}
+
 
     return 0;
 }
