@@ -10,6 +10,7 @@
 #include "ps2.h"
 #include "OSDInit.h"
 #include "OSDHistory.h"
+#include "debugprintf.h"
 
 void BootError(void)
 {
@@ -244,7 +245,7 @@ int PS2DiscBoot(int skip_PS2LOGO)
     const char *pChar, *cnf_start, *cnf_end;
     int fd, size, size_remaining, size_read;
 
-    printf("ExecutePs2GameDisc\n");
+    DPRINTF("PS2DiscBoot()\n");
 
     switch (PS2GetBootFile(ps2disc_boot))
     {
@@ -257,7 +258,7 @@ int PS2DiscBoot(int skip_PS2LOGO)
     // The browser uses open mode 5 when a specific thread is created, otherwise mode 4.
     if ((fd = open("cdrom0:\\SYSTEM.CNF;1", O_RDONLY)) < 0)
     {
-        printf("Can't open SYSTEM.CNF\n");
+        DPRINTF("Can't open SYSTEM.CNF\n");
         BootError();
     }
 
@@ -271,7 +272,7 @@ int PS2DiscBoot(int skip_PS2LOGO)
     {
         if ((size_read = read(fd, system_cnf, size_remaining)) <= 0)
         {
-            printf("Can't read SYSTEM.CNF\n");
+            DPRINTF("Can't read SYSTEM.CNF\n");
             BootError();
         }
     }

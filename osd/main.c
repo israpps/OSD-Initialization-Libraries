@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <malloc.h>
 #include <kernel.h>
 #include <debug.h>
 #include <fileio.h>
@@ -39,9 +40,6 @@
 #include "debugprintf.h"
 
 #define IMPORT_BIN2C(_n) extern unsigned char _n[]; extern unsigned int size_ ## _n;
-
-
-
 IMPORT_BIN2C(sio2man_irx)
 IMPORT_BIN2C(mcman_irx)
 IMPORT_BIN2C(mcserv_irx)
@@ -54,11 +52,24 @@ IMPORT_BIN2C(sior_irx)
 #endif
 
 
-#define MAX_LEN 256
-
+#define MAX_LEN 64
+#define CNF_LEN_MAX 20480 // 20kb should be enough for massive CNF's
 typedef struct
 {
 	int SKIPLOGO;
+    char AUTO[3][MAX_LEN];
+    char CROSS[3][MAX_LEN];
+    char CIRCLE[3][MAX_LEN];
+    char TRIANGLE[3][MAX_LEN];
+    char SQUARE[3][MAX_LEN];
+    char DOWN[3][MAX_LEN];
+    char RIGHT[3][MAX_LEN];
+    char UP[3][MAX_LEN];
+    char LEFT[3][MAX_LEN];
+    char L1[3][MAX_LEN];
+    char L2[3][MAX_LEN];
+    char R1[3][MAX_LEN];
+    char R2[3][MAX_LEN];
 }CONFIG;
 CONFIG GLOBCFG;
 
@@ -142,8 +153,7 @@ void LoadElf(char *filename, char* argv[], int argc)
 
 int dischandler();
 //keys to identify line indexes on config file
-enum {DEFAULT = 0, CROSS, CIRCLE, TRIANGLE, SQUARE, R1, L1, R2, L2, DOWN, RIGHT, UP, LEFT, KEYS_COUNT} KEYS;
-
+enum {SOURCE_INVALID = 0, SOURCE_MC0, SOURCE_MC1, SOURCE_MASS} CONFIG_SOURCES_ID;
 //default paths for missing data
 enum { WLEAPPmc0=0, WLEAPPmc1, DEV1mc0, DEV1mc1, INFMANmc0, INFMANmc1, OPLAPPmc0, OPLAPPmc1, DEFPATH_CNT} DEFPATH_ENUM;
 char* DEFPATH[] = {
@@ -156,21 +166,21 @@ char* DEFPATH[] = {
     "mc0:/APPS/OPNPS2LD.ELF",
     "mc1:/APPS/OPNPS2LD.ELF",
 };
-
+enum {DISCLOAD = 0} COMMANDS_ENUM;
 char* COMMANDS[] = {
     "$DISCLOAD",
-    "$DISCLOAD_NO_PS2LOGO",
 };
 
 
 int main(int argc, char *argv[])
 {
-    char LOADBUF[KEYS_COUNT][MAX_LEN];
-    int result, is_PCMCIA, ret, x=0;
+    char LOADBUF[KEYS_COUNT *3 ][MAX_LEN]; // KEYS_COUNT*3 because we want 3 paths for each key
+    int result, is_PCMCIA, ret, x=0, config_source = SOURCE_INVALID, cnf_size = 0;
 	unsigned long int bios_version;
     u32 stat;
     int fd;
     char romver[16], RomName[4], ROMVersionNumStr[5];
+    char* CNFBUFF, name, value;
 
     // Initialize SIFCMD & SIFRPC
     SifInitRpc(0);
@@ -217,9 +227,6 @@ int main(int argc, char *argv[])
     SifExecModuleBuffer(mcman_irx, size_mcman_irx, 0, NULL, NULL);
     SifExecModuleBuffer(mcserv_irx, size_mcserv_irx, 0, NULL, NULL);
     SifExecModuleBuffer(padman_irx, size_padman_irx, 0, NULL, NULL);
-    // Initialize libmc.
-    mcInit(MC_TYPE_XMC);
-    PadInitPads();
 
 #ifdef DEBUG_EESIO
 	int id;
@@ -233,7 +240,12 @@ int main(int argc, char *argv[])
 	DPRINTF("\tsior id=%d _start ret=%d\n", id, ret);
 #endif
 
-    // Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
+    DPRINTF("mcInit\n");
+    mcInit(MC_TYPE_XMC);
+    DPRINTF("PadInitPads\n");
+    PadInitPads();
+
+    DPRINTF("Loading rom0:ADDDRV\n");// Load ADDDRV. The OSD has it listed in rom0:OSDCNF/IOPBTCONF, but it is otherwise not loaded automatically.
     SifLoadModule("rom0:ADDDRV", 0, NULL);
 
     // Initialize libcdvd & supplement functions (which are not part of the ancient libcdvd library we use).
@@ -359,18 +371,142 @@ int main(int argc, char *argv[])
         fp = fopen("mc1:/PS2RB/LAUNCHER.CNF", "r");
         if (fp == NULL) {
 			DPRINTF("Cant load config from mc1\n");
-            for(x=0; x < DEFPATH_CNT; x++)
+            config_source = SOURCE_INVALID;
+        } else {config_source = SOURCE_MC1;}
+    } else {config_source = SOURCE_MC0;}
+    
+    cnf_size = fseek(fp, 0, SEEK_END);
+    fseek(fp, 0, SEEK_SET);
+
+    CNFBUFF = malloc(cnf_size + 1);
+    CNFBUFF[cnf_size+1] = '\0';
+    fread(CNFBUFF, cnf_size, 1, fp);
+    fclose(fp);
+    int var_cnt = 0;
+    char TMP[64];
+    for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
+        if (!strcmp("SKIP_PS2LOGO", name))
+            GLOBCFG.SKIPLOGO = atoi(value);
+
+        if (!strncmp("AUTO_", name, strlen("AUTO_")))
+        {
+            for (x=0; x<3; x++)
             {
-                if (file_exists(DEFPATH[x]))
-                    RunLoaderElf(DEFPATH[x]);
+                sprintf(TMP, "AUTO_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.AUTO[x] = value;
+            }
+        }
+        if (!strncmp("CROSS_", name, strlen("CROSS_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "CROSS_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.CROSS[x] = value;
+            }
+        }
+        if (!strncmp("CIRCLE", name, strlen("CIRCLE_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "CIRCLE_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.CIRCLE[x] = value;
+            }
+        }
+        if (!strncmp("TRIANGLE_", name, strlen("TRIANGLE_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "TRIANGLE_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.TRIANGLE[x] = value;
+            }
+        }
+        if (!strncmp("SQUARE_", name, strlen("SQUARE_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "SQUARE_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.SQUARE[x] = value;
+            }
+        }
+        if (!strncmp("DOWN_", name, strlen("DOWN_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "DOWN_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.DOWN[x] = value;
+            }
+        }
+        if (!strncmp("RIGHT_", name, strlen("RIGHT_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "RIGHT_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.RIGHT[x] = value;
+            }
+        }
+        if (!strncmp("UP_", name, strlen("UP_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "UP_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.UP[x] = value;
+            }
+        }
+        if (!strncmp("LEFT_", name, strlen("LEFT_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "LEFT_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.LEFT[x] = value;
+            }
+        }
+        if (!strncmp("L1_", name, strlen("L1_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "L1_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.L1[x] = value;
+            }
+        }
+        if (!strncmp("L2_", name, strlen("L2_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "L2_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.L2[x] = value;
+            }
+        }
+        if (!strncmp("R1_", name, strlen("R1_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "R1_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.R1[x] = value;
+            }
+        }
+        if (!strncmp("R2_", name, strlen("R2_")))
+        {
+            for (x=0; x<3; x++)
+            {
+                sprintf(TMP, "R2_%d", x);
+                if (!strcmp(TMP, name))
+                    GLOBCFG.R2[x] = value;
             }
         }
     }
-    
-	
-
-    fclose(fp);
-
+    free(CNFBUFF);
     int padval = 0;
     scr_printf("PadRead...\n");
     padval = ReadCombinedPadStatus();
@@ -378,18 +514,6 @@ int main(int argc, char *argv[])
     if (!is_PCMCIA)
         PadDeinitPads();
 
-    scr_printf("Looking for DEV1...\n");
-
-    if (file_exists("mc0:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc0:/BOOT/BOOT.ELF");}
-    else if (file_exists("mc1:/BOOT/BOOT.ELF"))
-        {RunLoaderElf("mc1:/BOOT/BOOT.ELF");}
-
-    scr_printf("Looking for INFMAN...\n");
-    if (file_exists("mc0:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc0:/MATRIXTEAM/MANAGER.ELF");}
-    else if (file_exists("mc1:/MATRIXTEAM/MANAGER.ELF"))
-        {RunLoaderElf("mc1:/MATRIXTEAM/MANAGER.ELF");}
 
 	DPRINTF("END OF CONTROL REACHED; DEFAULTS TO EMBEDDED PATHS!\n");
     for(x=0; x < DEFPATH_CNT; x++)
