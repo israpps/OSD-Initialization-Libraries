@@ -411,10 +411,11 @@ int main(int argc, char *argv[])
 
     scr_printf("\nModel:\t\t%s\n"
                "PlayStation Driver:\t%s\n"
-               "DVD Player:\t%s\n",
+               //"DVD Player:\t%s\n"
+               ,
                ModelNameGet(),
                PS1DRVGetVersion(),
-               DVDPlayerGetVersion());
+               //DVDPlayerGetVersion());
 
     SetDefaultSettings();
     FILE* fp;
