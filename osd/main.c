@@ -5,6 +5,7 @@
 #include <debug.h>
 #include <fileio.h>
 #include <iopcontrol.h>
+#include <tamtypes.h>
 #ifdef PSX
 #include <iopcontrol_special.h>
 #endif
@@ -18,6 +19,8 @@
 #include <osd_config.h>
 
 #include <sbv_patches.h>
+
+#include <usbhdfsd-common.h>
 
 #ifdef DEBUG_EESIO
 #include <sior.h>
@@ -44,6 +47,8 @@ IMPORT_BIN2C(sio2man_irx)
 IMPORT_BIN2C(mcman_irx)
 IMPORT_BIN2C(mcserv_irx)
 IMPORT_BIN2C(padman_irx)
+IMPORT_BIN2C(usbd_irx)
+IMPORT_BIN2C(usb_mass_irx)
 #ifdef PSX
 IMPORT_BIN2C(psx_ioprp)
 #endif
@@ -54,6 +59,7 @@ IMPORT_BIN2C(sior_irx)
 
 #define MAX_LEN 64
 #define CNF_LEN_MAX 20480 // 20kb should be enough for massive CNF's
+#define DELAY 3000
 
 typedef struct
 {
@@ -84,6 +90,10 @@ char KEYS_ID[17][10] = {
 };
 
 void RunLoaderElf(char *filename);
+void TimerInit(void);
+u64 Timer(void);
+void TimerEnd(void);
+void delay(int DELAY);
 
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
@@ -250,6 +260,9 @@ int main(int argc, char *argv[])
     DPRINTF("initializing libcdvd & supplements\n");
 	sceCdInit(SCECdINoD);
     cdInitAdd();
+    SifExecModuleBuffer(usbd_irx, size_usbd_irx, 0, NULL, NULL);
+    SifExecModuleBuffer(usb_mass_irx, size_usb_mass_irx, 0, NULL, NULL);
+    delay(3);
 
     // Initialize system paths.
     OSDInitSystemPaths();
@@ -408,10 +421,26 @@ int main(int argc, char *argv[])
 			for (j = 0; j < 3; j++)
 				GLOBCFG.KEYPATHS[x][j] = DEFPATH[3 * x + j];
     }
+	if (RAM_p != NULL)
+		free(RAM_p);
+
     int padval = 0;
     scr_printf("PadRead...\n");
     padval = ReadCombinedPadStatus();
+    u64 tstart;
+    TimerInit();
+	tstart = Timer();
 
+	//Stores last key during DELAY msec
+	while (Timer() <= (tstart + DELAY))
+	{
+		//Waits for pad
+		waitAnyPadReady();
+		//If key was detected
+		if (readPad() && new_pad)
+			lastKey = new_pad;
+	}
+	TimerEnd();
     if (!is_PCMCIA)
         PadDeinitPads();
 

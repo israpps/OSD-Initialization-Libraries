@@ -2,6 +2,7 @@
     "files.associations": {
         "osdconfig.h": "c",
         "string.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "modelname.h": "c"
     }
 }

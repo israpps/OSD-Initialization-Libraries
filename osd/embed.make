@@ -27,3 +27,9 @@ ioprp.c : psx/ioprp.img
 
 sior_irx.c: $(PS2SDK)/iop/irx/sior.irx
 	bin2c $< $@ sior_irx
+
+usbd_irx.c: $(PS2SDK)/iop/irx/usbd.irx
+	bin2c $< $@ usbd_irx
+
+usbhdfsd_irx.c: $(PS2SDK)/iop/irx/usbhdfsd.irx
+	bin2c $< $@ usb_mass_irx
