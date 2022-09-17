@@ -170,21 +170,21 @@ static int file_exists(char *filepath)
  */
 int CheckPath(char** path)
 {
-    if (!strncmp("mc?", path, 3))
+    if (!strncmp("mc?", (char*)path, 3))
     {
         path[2] = '0';
-        if (file_exists(path))
+        if (file_exists((char*)path))
             return 1;
         else
         {
             path[2] = '1';
-            if (file_exists(path))
+            if (file_exists((char*)path))
                 return 1;
         }
     }
-    if (!strcmp("LOAD_DVD", path))
+    if (!strcmp("LOAD_DVD", (char*)path))
         dischandler();
-    if (!strcmp("LOAD_DVD_NO_PS2LOGO", path))
+    if (!strcmp("LOAD_DVD_NO_PS2LOGO", (char*)path))
     {
         GLOBCFG.SKIPLOGO = 1;
         dischandler();
