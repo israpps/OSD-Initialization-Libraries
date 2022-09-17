@@ -260,7 +260,9 @@ int main(int argc, char *argv[])
     DPRINTF("initializing libcdvd & supplements\n");
 	sceCdInit(SCECdINoD);
     cdInitAdd();
+    DPRINTF("Loading USBD.IRX\n");
     SifExecModuleBuffer(usbd_irx, size_usbd_irx, 0, NULL, NULL);
+    DPRINTF("Loading USBHDFSD.IRX\n");
     SifExecModuleBuffer(usb_mass_irx, size_usb_mass_irx, 0, NULL, NULL);
     delay(3);
 
@@ -426,7 +428,6 @@ int main(int argc, char *argv[])
 
     int padval = 0;
     scr_printf("PadRead...\n");
-    padval = ReadCombinedPadStatus();
     u64 tstart;
     TimerInit();
 	tstart = Timer();
@@ -437,10 +438,10 @@ int main(int argc, char *argv[])
 		//Waits for pad
 		waitAnyPadReady();
 		//If key was detected
-		if (readPad() && new_pad)
-			lastKey = new_pad;
+	    padval = ReadCombinedPadStatus();
 	}
 	TimerEnd();
+
     if (!is_PCMCIA)
         PadDeinitPads();
 
