@@ -435,14 +435,17 @@ int main(int argc, char *argv[])
         DPRINTF("Config not invalid, reading now\n");
         pad_button = 0x0001;
         num_buttons = 16;
+        DPRINTF("Check CNF size\n");
         cnf_size = fseek(fp, 0, SEEK_END);
         fseek(fp, 0, SEEK_SET);
-
+        DPRINTF("Allocating %d bytes for RAM_p\n", cnf_size);
         RAM_p = (char *)malloc(cnf_size + 1);
-        RAM_p[cnf_size] = '\0';
+        DPRINTF("Read data INTO the buffer\n");
         fread(RAM_p, cnf_size, 1, fp);
         fclose(fp);
         CNFBUFF = RAM_p;
+        DPRINTF("NULL Terminate buffer\n");
+        CNFBUFF[cnf_size] = '\0';
         int var_cnt = 0;
         char TMP[64];
         for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
