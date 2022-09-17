@@ -432,19 +432,21 @@ int main(int argc, char *argv[])
 
     if (config_source != SOURCE_INVALID)
     {
+        DPRINTF("Config not invalid, reading now\n");
         pad_button = 0x0001;
         num_buttons = 16;
         cnf_size = fseek(fp, 0, SEEK_END);
         fseek(fp, 0, SEEK_SET);
 
         RAM_p = (char *)malloc(cnf_size + 1);
-        RAM_p[cnf_size+1] = '\0';
+        RAM_p[cnf_size] = '\0';
         fread(RAM_p, cnf_size, 1, fp);
         fclose(fp);
         CNFBUFF = RAM_p;
         int var_cnt = 0;
         char TMP[64];
         for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
+            DPRINTF("reading entry %d", var_cnt);
             if (!strcmp("SKIP_PS2LOGO", name))
                 GLOBCFG.SKIPLOGO = atoi(value);
 
