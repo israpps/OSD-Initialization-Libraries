@@ -19,7 +19,7 @@ IOP_OBJS = sio2man_irx.o mcman_irx.o mcserv_irx.o padman_irx.o usbhdfsd_irx.o us
 ICONS = icon_sys_A.o icon_sys_J.o icon_sys_C.o
 ICONS_TEMP = icon_sys_A.c icon_sys_J.c icon_sys_C.c sio2man_irx.c mcman_irx.c mcserv_irx.c
 IOPRP_TEMP = ioprp.c
-EE_OBJS = main.o common/elf.o common/cnfman.o common/timer.c\
+EE_OBJS = main.o common/elf.o common/cnfman.o common/timer.o \
 	common/pad.o common/libcdvd_add.o common/OSDConfig.o common/OSDInit.o common/OSDHistory.o common/dvdplayer.o common/ps1.o common/ps2.o common/modelname.o \
 	$(ICONS) $(IOP_OBJS) loader_elf.o 
 
