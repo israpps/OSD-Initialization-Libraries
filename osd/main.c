@@ -481,11 +481,11 @@ int main(int argc, char *argv[])
 		//If key was detected
 	    padval = ReadCombinedPadStatus();
 		button = pad_button;
-		for (i = 0; i < num_buttons; i++) {  // check all pad buttons
+		for (x = 0; x < num_buttons; x++) {  // check all pad buttons
 			if (padval & button) {
 				// if button detected , copy path to corresponding index
 				for (j = 0; j < 3; j++)
-					EXECPATHS[j] = GLOBCFG.KEYPATHS[i + 1][j];
+					EXECPATHS[j] = GLOBCFG.KEYPATHS[x + 1][j];
                 for (j = 0; j < 3; j++)
                 {
 				    CheckPath(&EXECPATHS[j]);
