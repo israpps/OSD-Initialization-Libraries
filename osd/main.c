@@ -414,8 +414,8 @@ int main(int argc, char *argv[])
                //"DVD Player:\t%s\n"
                ,
                ModelNameGet(),
-               PS1DRVGetVersion(),
-               //DVDPlayerGetVersion()
+               PS1DRVGetVersion()
+               //,DVDPlayerGetVersion()
                );
 
     SetDefaultSettings();
