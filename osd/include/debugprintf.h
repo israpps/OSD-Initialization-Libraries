@@ -7,7 +7,8 @@
 #ifdef DEBUG_PRINTF
 	#define DPRINTF(x...) sio_printf(x)
 #else
-	#define DPRINTF(x...) do {} while(0)
+//	#define DPRINTF(x...) do {} while(0)
+	#define DPRINTF(x...) printf(x)
 #endif
 /*******************************************/
 #endif

@@ -465,6 +465,7 @@ int main(int argc, char *argv[])
     } 
     else
     {
+        DPRINTF("Invalid config, loading hardcoded shit\n");
 		for (x = 0; x < 5; x++)
 			for (j = 0; j < 3; j++)
 				GLOBCFG.KEYPATHS[x][j] = DEFPATH[3 * x + j];
