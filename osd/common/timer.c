@@ -92,7 +92,7 @@ void delay(int delay)
 {
 	int i;
 	int ret;
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < delay; i++) {
 		ret = 0x01000000;
 		while (ret--)
 			asm("nop\nnop\nnop\nnop");
