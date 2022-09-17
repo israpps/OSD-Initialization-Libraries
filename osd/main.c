@@ -168,7 +168,7 @@ static int file_exists(char **filepath)
  Returns 1 of path was modified, if path is a command, the required action is performed
  Return 0 if function reached end (it did nothing)
  */
-int CheckPath(char* path)
+int CheckPath(char** path)
 {
     if (!strncmp("mc?", path, 3))
     {
