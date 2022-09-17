@@ -151,7 +151,7 @@ static void InitPSX()
 
 int dischandler();
 
-static int file_exists(char **filepath)
+static int file_exists(char *filepath)
 {
 	int fdn;
 
@@ -309,7 +309,7 @@ int main(int argc, char *argv[])
 
     padval = ReadCombinedPadStatus();
     if (padval & (PAD_START|PAD_R1))
-    while (1) {if (file_exists("mass:/RESCUE.ELF")) RunLoaderElf("mass:/RESCUE.ELF")}
+    while (1) {if (file_exists("mass:/RESCUE.ELF")) RunLoaderElf("mass:/RESCUE.ELF");}
 
     if ((fd = open("rom0:ROMVER", O_RDONLY)) >= 0)
     {
