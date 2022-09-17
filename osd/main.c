@@ -435,8 +435,6 @@ int main(int argc, char *argv[])
 	//Stores last key during DELAY msec
 	while (Timer() <= (tstart + DELAY))
 	{
-		//Waits for pad
-		waitAnyPadReady();
 		//If key was detected
 	    padval = ReadCombinedPadStatus();
 	}
