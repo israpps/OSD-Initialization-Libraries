@@ -440,10 +440,10 @@ int main(int argc, char *argv[])
         fseek(fp, 0, SEEK_SET);
         DPRINTF("Allocating %d bytes for RAM_p\n", cnf_size);
         RAM_p = (char *)malloc(cnf_size + 1);
-        DPRINTF("Read data INTO the buffer\n");
-        fread(RAM_p, cnf_size, 1, fp);
-        fclose(fp);
         CNFBUFF = RAM_p;
+        DPRINTF("Read data INTO the buffer\n");
+        fread(CNFBUFF, cnf_size, 1, fp);
+        fclose(fp);
         DPRINTF("NULL Terminate buffer\n");
         CNFBUFF[cnf_size] = '\0';
         int var_cnt = 0;
