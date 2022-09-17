@@ -93,11 +93,20 @@ void RunLoaderElf(char *filename);
 void TimerInit(void);
 u64 Timer(void);
 void TimerEnd(void);
-void delay(int DELAY);
+void delay(int delay);
 
 void CleanUp(void)
 { // This is called from DVDPlayerBoot(). Deinitialize all RPCs here.
     sceCdInit(SCECdEXIT);
+}
+
+void SetDefaultSettings(void)
+{
+    int i, j;
+	for (i = 0; i < 17; i++)
+		for (j = 0; j < 3; j++)
+			GLOBCFG.KEYPATHS[i][j] = NULL;
+    GLOBCFG.SKIPLOGO = 1;
 }
 
 static void AlarmCallback(s32 alarm_id, u16 time, void *common)
@@ -140,7 +149,9 @@ static void InitPSX()
 }
 #endif
 
-static int file_exists(char *filepath)
+int dischandler();
+
+static int file_exists(char **filepath)
 {
 	int fdn;
 
@@ -153,7 +164,33 @@ static int file_exists(char *filepath)
 	return 1;
 }
 
-int dischandler();
+/*check if path has a special command or token (like 'mc?:/) to handle
+ Returns 1 of path was modified, if path is a command, the required action is performed
+ Return 0 if function reached end (it did nothing)
+ */
+int CheckPath(char* path)
+{
+    if (!strncmp("mc?", path, 3))
+    {
+        path[2] = '0';
+        if (file_exists(path))
+            return 1;
+        else
+        {
+            path[2] = '1';
+            if (file_exists(path))
+                return 1;
+        }
+    }
+    if (!strcmp("LOAD_DVD", path))
+        dischandler();
+    if (!strcmp("LOAD_DVD_NO_PS2LOGO", path))
+    {
+        GLOBCFG.SKIPLOGO = 1;
+        dischandler();
+    }
+    return 0;
+}
 
 enum {SOURCE_INVALID = 0, SOURCE_MC0, SOURCE_MC1, SOURCE_MASS} CONFIG_SOURCES_ID;
 
@@ -179,17 +216,18 @@ enum {DISCLOAD = 0} COMMANDS_ENUM;
 char* COMMANDS[] = {
     "$DISCLOAD",
 };
-
+char* EXECPATHS[3];
 
 int main(int argc, char *argv[])
 {
-    int result, is_PCMCIA, ret, x=0, j=0, config_source = SOURCE_INVALID, cnf_size = 0;
+    int result, is_PCMCIA, ret, button, x=0, j=0, config_source = SOURCE_INVALID, cnf_size = 0, padval = 0;
 	unsigned long int bios_version;
     u32 stat;
     int fd;
     char romver[16], RomName[4], ROMVersionNumStr[5];
     unsigned char *RAM_p, *CNFBUFF, *name, *value;
-
+    static int num_buttons = 4,
+                pad_button = 0x0100;  // first pad button is L2
     // Initialize SIFCMD & SIFRPC
     SifInitRpc(0);
 
@@ -268,6 +306,10 @@ int main(int argc, char *argv[])
 
     // Initialize system paths.
     OSDInitSystemPaths();
+
+    padval = ReadCombinedPadStatus();
+    if (padval & (PAD_START|PAD_R1))
+    while (1) {if (file_exists("mass:/RESCUE.ELF")) RunLoaderElf("mass:/RESCUE.ELF")}
 
     if ((fd = open("rom0:ROMVER", O_RDONLY)) >= 0)
     {
@@ -376,7 +418,7 @@ int main(int argc, char *argv[])
                PS1DRVGetVersion(),
                DVDPlayerGetVersion());
 
-    
+    SetDefaultSettings();
     FILE* fp;
     fp = fopen("mc0:/PS2RB/LAUNCHER.CNF", "r");
     if (fp == NULL) {
@@ -390,6 +432,8 @@ int main(int argc, char *argv[])
 
     if (config_source != SOURCE_INVALID)
     {
+        pad_button = 0x0001;
+        num_buttons = 16;
         cnf_size = fseek(fp, 0, SEEK_END);
         fseek(fp, 0, SEEK_SET);
 
@@ -426,7 +470,6 @@ int main(int argc, char *argv[])
 	if (RAM_p != NULL)
 		free(RAM_p);
 
-    int padval = 0;
     scr_printf("PadRead...\n");
     u64 tstart;
     TimerInit();
@@ -437,16 +480,45 @@ int main(int argc, char *argv[])
 	{
 		//If key was detected
 	    padval = ReadCombinedPadStatus();
+		button = pad_button;
+		for (i = 0; i < num_buttons; i++) {  // check all pad buttons
+			if (padval & button) {
+				// if button detected , copy path to corresponding index
+				for (j = 0; j < 3; j++)
+					EXECPATHS[j] = GLOBCFG.KEYPATHS[i + 1][j];
+                for (j = 0; j < 3; j++)
+                {
+				    CheckPath(&EXECPATHS[j]);
+                    if (file_exists(EXECPATHS[j]))
+                    {
+                        if (!is_PCMCIA)
+                            PadDeinitPads();
+                        RunLoaderElf(EXECPATHS[j]);
+                    }
+                }
+                break;
+			}
+			button = button << 1;  // sll of 1 cleared bit to move to next pad button
+		}
 	}
 	TimerEnd();
 
     if (!is_PCMCIA)
         PadDeinitPads();
+    for (j = 0; j < 3; j++) //no keys pressed or something happened! copy AUTO keys and try
+	EXECPATHS[j] = GLOBCFG.KEYPATHS[0][j];
+    for (j = 0; j < 3; j++)
+    {
+	    CheckPath(&EXECPATHS[j]);
+        if (file_exists(EXECPATHS[j]))
+        {
+            if (!is_PCMCIA)
+                PadDeinitPads();
+            RunLoaderElf(EXECPATHS[j]);
+        }
+    }
 
-
-	DPRINTF("END OF CONTROL REACHED; DEFAULTS TO EMBEDDED PATHS!\n");
-
-
+	DPRINTF("END OF CONTROL REACHED!\n");
     return 0;
 }
 

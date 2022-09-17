@@ -40,7 +40,7 @@
 void TimerInit(void);
 u64 Timer(void);
 void TimerEnd(void);
-void delay(int DELAY);
+void delay(int delay);
 //________________ From uLaunchELF ______________________
 // Timer Define
 #define T0_COUNT ((volatile unsigned long*)0x10000000) 
@@ -88,7 +88,7 @@ void TimerEnd(void)
 	TimerInterruptCount = 0;
 }
 //--------------------------------------------------------------
-void delay(int DELAY)
+void delay(int delay)
 {
 	int i;
 	int ret;
