@@ -171,7 +171,7 @@ char* COMMANDS[] = {
 
 int main(int argc, char *argv[])
 {
-    int result, is_PCMCIA, ret, x=0, config_source = SOURCE_INVALID, cnf_size = 0;
+    int result, is_PCMCIA, ret, x=0, j=0, config_source = SOURCE_INVALID, cnf_size = 0;
 	unsigned long int bios_version;
     u32 stat;
     int fd;
@@ -386,11 +386,11 @@ int main(int argc, char *argv[])
             if (!strcmp("SKIP_PS2LOGO", name))
                 GLOBCFG.SKIPLOGO = atoi(value);
 
-	    	for (i = 0; i < 17; i++) {
+	    	for (x = 0; x < 17; x++) {
 	    		for (j = 0; j < 3; j++) {
-	    			sprintf(TMP, "LK_%s_E%d", LK_ID[i], j + 1);
+	    			sprintf(TMP, "LK_%s_E%d", LK_ID[x], j + 1);
 	    			if (!strcmp(name, TMP)) {
-	    				GLOBCFG.KEYPATHS[i][j] = value;
+	    				GLOBCFG.KEYPATHS[x][j] = value;
 	    				break;
 	    			}
 	    		}
@@ -401,9 +401,9 @@ int main(int argc, char *argv[])
     } 
     else
     {
-		for (i = 0; i < 5; i++)
+		for (x = 0; x < 5; x++)
 			for (j = 0; j < 3; j++)
-				GLOBCFG.KEYPATHS[i][j] = DEFPATH[3 * i + j];
+				GLOBCFG.KEYPATHS[x][j] = DEFPATH[3 * x + j];
     }
     int padval = 0;
     scr_printf("PadRead...\n");
