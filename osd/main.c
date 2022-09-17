@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     u32 stat;
     int fd;
     char romver[16], RomName[4], ROMVersionNumStr[5];
-    char *CNFBUFF, *name, *value;
+    unsigned char *RAM_p, *CNFBUFF, *name, *value;
 
     // Initialize SIFCMD & SIFRPC
     SifInitRpc(0);
@@ -378,10 +378,11 @@ int main(int argc, char *argv[])
         cnf_size = fseek(fp, 0, SEEK_END);
         fseek(fp, 0, SEEK_SET);
 
-        CNFBUFF = malloc(cnf_size + 1);
-        CNFBUFF[cnf_size+1] = '\0';
-        fread(CNFBUFF, cnf_size, 1, fp);
+        RAM_p = (char *)malloc(cnf_size + 1);
+        RAM_p[cnf_size+1] = '\0';
+        fread(RAM_p, cnf_size, 1, fp);
         fclose(fp);
+        CNFBUFF = RAM_p;
         int var_cnt = 0;
         char TMP[64];
         for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
@@ -390,7 +391,7 @@ int main(int argc, char *argv[])
 
 	    	for (x = 0; x < 17; x++) {
 	    		for (j = 0; j < 3; j++) {
-	    			sprintf(TMP, "LK_%s_E%d", LK_ID[x], j + 1);
+	    			sprintf(TMP, "LK_%s_E%d", KEYS_ID[x], j + 1);
 	    			if (!strcmp(name, TMP)) {
 	    				GLOBCFG.KEYPATHS[x][j] = value;
 	    				break;
@@ -399,7 +400,7 @@ int main(int argc, char *argv[])
 	    	}
 
         }
-        free(CNFBUFF);
+        free(RAM_p);
     } 
     else
     {
