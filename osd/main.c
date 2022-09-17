@@ -165,31 +165,29 @@ static int file_exists(char *filepath)
 }
 
 /*check if path has a special command or token (like 'mc?:/) to handle
- Returns 1 of path was modified, if path is a command, the required action is performed
- Return 0 if function reached end (it did nothing)
  */
-int CheckPath(char** path)
+char* CheckPath(char* path)
 {
-    if (!strncmp("mc?", (char*)path, 3))
+    if (!strncmp("mc?", path, 3))
     {
         path[2] = '0';
-        if (file_exists((char*)path))
-            return 1;
+        if (file_exists(path))
+            return path;
         else
         {
             path[2] = '1';
-            if (file_exists((char*)path))
-                return 1;
+            if (file_exists(path))
+                return path;
         }
     }
-    if (!strcmp("LOAD_DVD", (char*)path))
+    if (!strcmp("LOAD_DVD", path))
         dischandler();
-    if (!strcmp("LOAD_DVD_NO_PS2LOGO", (char*)path))
+    if (!strcmp("LOAD_DVD_NO_PS2LOGO", path))
     {
         GLOBCFG.SKIPLOGO = 1;
         dischandler();
     }
-    return 0;
+    return path;
 }
 
 enum {SOURCE_INVALID = 0, SOURCE_MC0, SOURCE_MC1, SOURCE_MASS} CONFIG_SOURCES_ID;
@@ -488,7 +486,7 @@ int main(int argc, char *argv[])
 					EXECPATHS[j] = GLOBCFG.KEYPATHS[x + 1][j];
                 for (j = 0; j < 3; j++)
                 {
-				    CheckPath(&EXECPATHS[j]);
+				    EXECPATHS[j] = CheckPath(EXECPATHS[j]);
                     if (file_exists(EXECPATHS[j]))
                     {
                         if (!is_PCMCIA)
@@ -509,7 +507,7 @@ int main(int argc, char *argv[])
 	EXECPATHS[j] = GLOBCFG.KEYPATHS[0][j];
     for (j = 0; j < 3; j++)
     {
-	    CheckPath(&EXECPATHS[j]);
+	    EXECPATHS[j] = CheckPath(EXECPATHS[j]);
         if (file_exists(EXECPATHS[j]))
         {
             if (!is_PCMCIA)
