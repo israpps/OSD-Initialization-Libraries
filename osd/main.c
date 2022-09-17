@@ -54,11 +54,13 @@ IMPORT_BIN2C(sior_irx)
 
 #define MAX_LEN 64
 #define CNF_LEN_MAX 20480 // 20kb should be enough for massive CNF's
+
 typedef struct
 {
 	int SKIPLOGO;
-    char *KEYPATHS[17][3]
+    char *KEYPATHS[17][3];
 }CONFIG;
+
 CONFIG GLOBCFG;
 
 char KEYS_ID[17][10] = {
