@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
         RAM_p = (char *)malloc(cnf_size + 1);
         CNFBUFF = RAM_p;
         DPRINTF("Read data INTO the buffer\n");
-        fread(CNFBUFF, cnf_size, 1, fp);
+        fread(RAM_p, cnf_size, 1, fp);
         fclose(fp);
         DPRINTF("NULL Terminate buffer\n");
         CNFBUFF[cnf_size] = '\0';
