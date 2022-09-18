@@ -436,7 +436,8 @@ int main(int argc, char *argv[])
         pad_button = 0x0001;
         num_buttons = 16;
         DPRINTF("Check CNF size\n");
-        cnf_size = fseek(fp, 0, SEEK_END);
+        fseek(fp, 0, SEEK_END);
+        cnf_size = ftell(fp);
         fseek(fp, 0, SEEK_SET);
         DPRINTF("Allocating %d bytes for RAM_p\n", cnf_size);
         RAM_p = (char *)malloc(cnf_size + 1);
