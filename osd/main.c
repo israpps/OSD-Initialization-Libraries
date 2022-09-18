@@ -441,32 +441,37 @@ int main(int argc, char *argv[])
         fseek(fp, 0, SEEK_SET);
         DPRINTF("Allocating %d bytes for RAM_p\n", cnf_size);
         RAM_p = (char *)malloc(cnf_size + 1);
-        CNFBUFF = RAM_p;
-        DPRINTF("Read data INTO the buffer\n");
-        fread(RAM_p, cnf_size, 1, fp);
-        DPRINTF("Reading finished... Closing fp*\n");
-        fclose(fp);
-        DPRINTF("NULL Terminate buffer\n");
-        CNFBUFF[cnf_size] = '\0';
-        int var_cnt = 0;
-        char TMP[64];
-        for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
-            DPRINTF("reading entry %d", var_cnt);
-            if (!strcmp("SKIP_PS2LOGO", name))
-                GLOBCFG.SKIPLOGO = atoi(value);
+        if (RAM_p != NULL)
+        {
+            CNFBUFF = RAM_p;
+            DPRINTF("Read data INTO the buffer\n");
+            if (fread(RAM_p, cnf_size, 1, fp) == cnf_size)
+            {
+                DPRINTF("Reading finished... Closing fp*\n");
+                fclose(fp);
+                DPRINTF("NULL Terminate buffer\n");
+                CNFBUFF[cnf_size] = '\0';
+                int var_cnt = 0;
+                char TMP[64];
+                for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
+                    DPRINTF("reading entry %d", var_cnt);
+                    if (!strcmp("SKIP_PS2LOGO", name))
+                        GLOBCFG.SKIPLOGO = atoi(value);
 
-	    	for (x = 0; x < 17; x++) {
-	    		for (j = 0; j < 3; j++) {
-	    			sprintf(TMP, "LK_%s_E%d", KEYS_ID[x], j + 1);
-	    			if (!strcmp(name, TMP)) {
-	    				GLOBCFG.KEYPATHS[x][j] = value;
-	    				break;
-	    			}
-	    		}
-	    	}
+	            	for (x = 0; x < 17; x++) {
+	            		for (j = 0; j < 3; j++) {
+	            			sprintf(TMP, "LK_%s_E%d", KEYS_ID[x], j + 1);
+	            			if (!strcmp(name, TMP)) {
+	            				GLOBCFG.KEYPATHS[x][j] = value;
+	            				break;
+	            			}
+	            		}
+	            	}
 
-        }
-        free(RAM_p);
+                }
+                free(RAM_p);
+            } else {DPRINTF("ERROR: could not read %d bytes of config file\n", cnf_size);}
+        } else {DPRINTF("Failed to allocate!\n");}
     } 
     else
     {
