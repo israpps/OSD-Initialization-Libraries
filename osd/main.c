@@ -444,6 +444,7 @@ int main(int argc, char *argv[])
         CNFBUFF = RAM_p;
         DPRINTF("Read data INTO the buffer\n");
         fread(RAM_p, cnf_size, 1, fp);
+        DPRINTF("Reading finished... Closing fp*\n");
         fclose(fp);
         DPRINTF("NULL Terminate buffer\n");
         CNFBUFF[cnf_size] = '\0';
