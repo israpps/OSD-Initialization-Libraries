@@ -69,7 +69,7 @@ typedef struct
 
 CONFIG GLOBCFG;
 
-char KEYS_ID[17] = {
+const char KEYS_ID[17] = {
     "AUTO",
     "SELECT",    // 0x0001
     "L3",        // 0x0002
