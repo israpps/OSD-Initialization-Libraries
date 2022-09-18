@@ -456,7 +456,7 @@ int main(int argc, char *argv[])
                 for (var_cnt = 0; get_CNF_string(&CNFBUFF, &name, &value); var_cnt++) {
                     DPRINTF("reading entry %d", var_cnt);
                     if (!strcmp("SKIP_PS2LOGO", name))
-                        GLOBCFG.SKIPLOGO = atoi(value);
+                        {GLOBCFG.SKIPLOGO = atoi(value); continue;}
 
 	            	for (x = 0; x < 17; x++) {
 	            		for (j = 0; j < 3; j++) {
